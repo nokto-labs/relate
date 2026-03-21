@@ -4,6 +4,9 @@
   "description": "Hono REST API routes for @nokto-labs/relate CRM SDK.",
   "type": "module",
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/nokto-labs/crm",

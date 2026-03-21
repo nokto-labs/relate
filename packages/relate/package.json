@@ -4,6 +4,9 @@
   "description": "A CRM SDK for developers. Define your schema in code, get typed clients instantly.",
   "type": "module",
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/nokto-labs/crm",
