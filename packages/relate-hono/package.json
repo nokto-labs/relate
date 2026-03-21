@@ -1,0 +1,38 @@
+{
+  "name": "@nokto-labs/relate-hono",
+  "version": "0.1.0",
+  "description": "Hono REST API routes for @nokto-labs/relate CRM SDK.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nokto-labs/crm",
+    "directory": "packages/relate-hono"
+  },
+  "homepage": "https://github.com/nokto-labs/crm#readme",
+  "bugs": "https://github.com/nokto-labs/crm/issues",
+  "keywords": ["crm", "sdk", "hono", "rest", "api", "routes", "typescript", "cloudflare-workers"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "dev": "tsup --watch",
+    "prepublishOnly": "pnpm run build && pnpm run typecheck"
+  },
+  "dependencies": {
+    "@nokto-labs/relate": "workspace:*",
+    "hono": "^4.6.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.0",
+    "typescript": "^5.5.0"
+  }
+}

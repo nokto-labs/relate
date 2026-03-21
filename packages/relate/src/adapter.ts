@@ -1,0 +1,133 @@
+import type { CRMRecord, CRMList, Relationship, Activity, SchemaInput, ObjectRef } from './types'
+
+// ─── Find options ────────────────────────────────────────────────────────────
+
+export interface FindRecordsOptions {
+  filter?: Record<string, unknown>
+  limit?: number
+  offset?: number
+  orderBy?: string
+  order?: 'asc' | 'desc'
+  cursor?: string
+}
+
+export interface PaginatedResult<T = CRMRecord> {
+  records: T[]
+  nextCursor?: string
+}
+
+export interface UpsertResult<T = CRMRecord> {
+  record: T
+  isNew: boolean
+}
+
+// ─── Relationship inputs ─────────────────────────────────────────────────────
+
+export interface CreateRelationshipInput<S extends SchemaInput = SchemaInput> {
+  from: ObjectRef<S>
+  to: ObjectRef<S>
+  type: string
+  attributes?: Record<string, unknown>
+}
+
+export interface ListRelationshipsOptions {
+  type?: string
+  limit?: number
+}
+
+// ─── Activity inputs ─────────────────────────────────────────────────────────
+
+export interface TrackActivityInput<S extends SchemaInput = SchemaInput> {
+  record: ObjectRef<S>
+  type: string
+  metadata?: Record<string, unknown>
+  occurredAt?: Date
+}
+
+export interface ListActivitiesOptions {
+  type?: string
+  limit?: number
+  offset?: number
+  /** Return only activities that occurred before this date (for cursor pagination) */
+  before?: Date
+}
+
+// ─── List inputs ─────────────────────────────────────────────────────────────
+
+export interface CreateListInput<S extends SchemaInput = SchemaInput> {
+  name: string
+  object: Extract<keyof S, string>
+  type: 'static' | 'dynamic'
+  filter?: Record<string, unknown>
+}
+
+export interface ListListsOptions {
+  object?: string
+  type?: 'static' | 'dynamic'
+  limit?: number
+  offset?: number
+}
+
+export interface ListItemsOptions {
+  filter?: Record<string, unknown>
+  limit?: number
+  offset?: number
+  cursor?: string
+}
+
+// ─── Migrations ──────────────────────────────────────────────────────────────
+
+export interface Migration {
+  /** Unique identifier, e.g. "001_rename_tier_to_level" */
+  id: string
+  /** Apply the migration */
+  up(db: unknown): Promise<void>
+}
+
+// ─── Storage adapter ─────────────────────────────────────────────────────────
+
+/**
+ * The storage adapter interface. Implement this to support a new database backend.
+ * The D1 adapter (`relate/d1`) implements this for Cloudflare D1.
+ */
+export interface StorageAdapter {
+  /** Called by createCRM immediately — seeds the schema so record operations work before migrate() */
+  setSchema?(schema: SchemaInput): void
+  /** Create tables and sync the object schema registry */
+  migrate(schema: SchemaInput): Promise<void>
+  /** Apply user-defined migrations with tracking */
+  applyMigrations?(migrations: Migration[]): Promise<void>
+
+  // Records
+  createRecord(objectSlug: string, attributes: Record<string, unknown>): Promise<CRMRecord>
+  upsertRecord(objectSlug: string, uniqueBy: string, attributes: Record<string, unknown>): Promise<UpsertResult>
+  getRecord(objectSlug: string, id: string): Promise<CRMRecord | null>
+  findRecords(objectSlug: string, options?: FindRecordsOptions): Promise<CRMRecord[]>
+  findRecordsPage?(objectSlug: string, options?: FindRecordsOptions): Promise<PaginatedResult>
+  countRecords(objectSlug: string, filter?: Record<string, unknown>): Promise<number>
+  updateRecord(objectSlug: string, id: string, attributes: Record<string, unknown>): Promise<CRMRecord>
+  deleteRecord(objectSlug: string, id: string): Promise<void>
+  /** Clean up relationships and list memberships for a deleted record */
+  cleanupRecordRefs?(objectSlug: string, id: string): Promise<void>
+
+  // Relationships
+  createRelationship(input: CreateRelationshipInput): Promise<Relationship>
+  listRelationships(ref?: { object: string; id: string }, options?: ListRelationshipsOptions): Promise<Relationship[]>
+  deleteRelationship(id: string): Promise<void>
+  updateRelationship(id: string, attributes: Record<string, unknown>): Promise<Relationship>
+
+  // Activities
+  trackActivity(input: TrackActivityInput): Promise<Activity>
+  listActivities(ref?: { object: string; id: string }, options?: ListActivitiesOptions): Promise<Activity[]>
+
+  // Lists
+  createList(input: CreateListInput): Promise<CRMList>
+  getList(id: string): Promise<CRMList | null>
+  listLists(options?: ListListsOptions): Promise<CRMList[]>
+  updateList(id: string, attrs: { name?: string; filter?: Record<string, unknown> }): Promise<CRMList>
+  deleteList(id: string): Promise<void>
+  addToList(listId: string, recordIds: string[]): Promise<void>
+  removeFromList(listId: string, recordIds: string[]): Promise<void>
+  listItems(listId: string, options?: ListItemsOptions): Promise<PaginatedResult>
+  countListItems(listId: string, filter?: Record<string, unknown>): Promise<number>
+}

@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.wrangler/
+*.d.ts
+*.d.ts.map
+*.js.map
+.DS_Store
+.claude
