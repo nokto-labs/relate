@@ -1,6 +1,6 @@
 {
   "name": "@nokto-labs/relate",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Define your domain in TypeScript. Get typed records, relationships, activity tracking, dynamic lists, and a full REST API.",
   "type": "module",
   "license": "MIT",

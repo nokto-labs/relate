@@ -1,6 +1,6 @@
 {
   "name": "@nokto-labs/relate-d1",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Cloudflare D1 storage adapter for @nokto-labs/relate.",
   "type": "module",
   "license": "MIT",
