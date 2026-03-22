@@ -41,14 +41,14 @@ export const schema = defineSchema({
           options: ['lead', 'qualified', 'proposal', 'closed_won', 'closed_lost'] as const,
         },
         currency: 'text',
+        owner: { type: 'ref', object: 'person', onDelete: 'set_null' },
+        company: { type: 'ref', object: 'company', onDelete: 'set_null' },
       },
     },
   },
 
   relationships: {
     works_at: { from: 'person', to: 'company' },
-    owner: { from: 'person', to: 'deal' },
-    associated_with: { from: 'company', to: 'deal' },
   },
 })
 ```
@@ -124,6 +124,11 @@ DELETE /people/:id          # delete (cascades relationships + list items)
 
 # Same for /companies, /deals
 
+# Nested ref routes (auto-generated from ref attributes)
+GET    /people/:id/deals         # deals owned by person
+POST   /people/:id/deals         # create deal with owner = person
+GET    /companies/:id/deals      # deals for company
+
 # Relationships
 POST   /relationships       # link any two records
 GET    /relationships       # list all
@@ -153,6 +158,10 @@ GET /people?tier=vip
 GET /deals?value[gte]=10000&value[lt]=100000
 GET /deals?stage[in]=lead,qualified
 GET /people?name[like]=Ali%
+
+# Ref filtering
+GET /deals?owner=person-id
+GET /deals?company[in]=id1,id2
 
 # Cursor pagination
 GET /people?limit=20&cursor=eyJ2Ijo...

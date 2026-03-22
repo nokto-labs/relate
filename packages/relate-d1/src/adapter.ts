@@ -1,13 +1,18 @@
 import type { StorageAdapter, CreateRelationshipInput, TrackActivityInput, FindRecordsOptions, ListActivitiesOptions, ListRelationshipsOptions, PaginatedResult, UpsertResult, Migration, CreateListInput, ListListsOptions, ListItemsOptions, RelateRecord, RelateList, Relationship, Activity, SchemaInput, ObjectSchema } from '@nokto-labs/relate'
-import type { D1Database } from './d1-types'
+import type { D1Database, D1PreparedStatement } from './d1-types'
 import { migrate, applyMigrations } from './migrations'
-import { createRecord, upsertRecord, getRecord, updateRecord, deleteRecord } from './records/crud'
+import { createRecord, upsertRecord, getRecord, updateRecord, updateRecordStatement, deleteRecord, deleteRecordStatement } from './records/crud'
 import { findRecords, findRecordsPage, countRecords } from './records/queries'
 import * as relationships from './relationships'
 import * as activities from './activities'
 import { createList, getList, listLists, updateList, deleteList } from './lists/crud'
 import { addToList, removeFromList, listItems, countListItems } from './lists/items'
-import { cleanupRecordRefs } from './cleanup'
+import { cleanupRecordRefs, cleanupRecordRefStatements } from './cleanup'
+
+type D1RecordMutation =
+  | { type: 'update'; objectSlug: string; id: string; attributes: Record<string, unknown>; updatedAtMs: number }
+  | { type: 'delete'; objectSlug: string; id: string }
+  | { type: 'cleanup'; objectSlug: string; id: string }
 
 export class D1Adapter implements StorageAdapter {
   private schema: SchemaInput = {}
@@ -67,6 +72,32 @@ export class D1Adapter implements StorageAdapter {
 
   cleanupRecordRefs(objectSlug: string, id: string): Promise<void> {
     return cleanupRecordRefs(this.db, objectSlug, id)
+  }
+
+  async commitRecordMutations(mutations: D1RecordMutation[]): Promise<void> {
+    if (mutations.length === 0) return
+    await this.db.batch(mutations.flatMap((mutation) => this.mutationStatements(mutation)))
+  }
+
+  private mutationStatements(mutation: D1RecordMutation): D1PreparedStatement[] {
+    if (mutation.type === 'update') {
+      return [
+        updateRecordStatement(
+          this.db,
+          mutation.objectSlug,
+          this.objectSchema(mutation.objectSlug),
+          mutation.id,
+          mutation.attributes,
+          mutation.updatedAtMs,
+        ),
+      ]
+    }
+
+    if (mutation.type === 'cleanup') {
+      return cleanupRecordRefStatements(this.db, mutation.objectSlug, mutation.id)
+    }
+
+    return [deleteRecordStatement(this.db, mutation.objectSlug, mutation.id)]
   }
 
   createRelationship(input: CreateRelationshipInput): Promise<Relationship> {

@@ -6,6 +6,7 @@ import { RelationshipsClient } from './modules/relationships'
 import { ActivitiesClient } from './modules/activities'
 import { ListsClient } from './modules/lists'
 import { EventBus } from './events'
+import { validateSchema } from './schema-validation'
 
 type ReservedKeys = 'migrate' | 'applyMigrations' | 'relationships' | 'activities' | 'lists' | 'on' | 'off'
 
@@ -35,6 +36,7 @@ export function relate<T extends SchemaDefinition>(config: {
   const { adapter, schema } = config
   const objects = schema.objects
 
+  validateSchema(objects)
   adapter.setSchema?.(objects)
 
   const events = config.events ?? new EventBus()
@@ -43,7 +45,7 @@ export function relate<T extends SchemaDefinition>(config: {
   const objectClients = Object.fromEntries(
     Object.entries(objects).map(([slug, objectSchema]) => [
       slug,
-      new ObjectClient(adapter, slug, objectSchema, events, () => instance),
+      new ObjectClient(adapter, slug, objectSchema, objects, events, () => instance),
     ]),
   ) as Record<string, ObjectClient<ObjectSchema>>
 

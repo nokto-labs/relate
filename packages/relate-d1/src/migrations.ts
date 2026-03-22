@@ -125,6 +125,15 @@ async function migrateObjectTable(
         .run()
     }
   }
+
+  // Auto-index ref columns
+  for (const [attrName, attrSchema] of Object.entries(objectSchema.attributes)) {
+    if (typeof attrSchema === 'object' && (attrSchema as { type: string }).type === 'ref') {
+      await db
+        .prepare(`CREATE INDEX IF NOT EXISTS idx_${table}_${attrName} ON ${table}(${attrName})`)
+        .run()
+    }
+  }
 }
 
 // ─── Main migrate ─────────────────────────────────────────────────────────────

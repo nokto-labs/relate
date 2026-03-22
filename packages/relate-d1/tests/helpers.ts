@@ -1,5 +1,5 @@
 import { Miniflare } from 'miniflare'
-import { relate, defineSchema, EventBus } from '@nokto-labs/relate'
+import { relate, defineSchema, EventBus } from '../../relate/src'
 import { D1Adapter } from '../src'
 import type { D1Database } from '../src'
 

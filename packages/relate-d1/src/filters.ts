@@ -50,7 +50,7 @@ export function parseFilterClauses(
       } else if (op === 'like') {
         if (attrSchema) {
           const type = typeof attrSchema === 'string' ? attrSchema : attrSchema.type
-          if (!['text', 'email', 'url', 'select'].includes(type)) {
+          if (!['text', 'email', 'url', 'select', 'ref'].includes(type)) {
             throw new ValidationError({ message: `Operator "like" is not supported for attribute "${key}"`, field: key })
           }
         }

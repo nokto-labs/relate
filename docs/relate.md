@@ -46,12 +46,71 @@ const schema = defineSchema({
 })
 ```
 
-Attribute types: `text`, `number`, `boolean`, `date`, `email`, `url`, `select`.
+Attribute types: `text`, `number`, `boolean`, `date`, `email`, `url`, `select`, `ref`.
 
 Options per object:
 - `plural` — route name (defaults to slug + `s`)
 - `uniqueBy` — enables upsert and duplicate checking on create
 - `relationships` — optional, documents how objects connect
+
+## Refs
+
+Refs are foreign-key-like attributes that store another record's ID directly on a record. Use them for ownership and parent-child relationships.
+
+```typescript
+const schema = defineSchema({
+  objects: {
+    guest: {
+      attributes: { name: { type: 'text', required: true } },
+    },
+    event: {
+      attributes: { title: { type: 'text', required: true } },
+    },
+    checkin: {
+      attributes: {
+        guest: { type: 'ref', object: 'guest', required: true, onDelete: 'cascade' },
+        event: { type: 'ref', object: 'event', required: true, onDelete: 'restrict' },
+        status: { type: 'select', options: ['invited', 'confirmed', 'checked_in'] as const },
+      },
+    },
+  },
+})
+```
+
+### Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `object` | — | Target object slug (must exist in schema) |
+| `required` | `false` | Maps to `NOT NULL` |
+| `validate` | `true` | Checks target record exists on create/update |
+| `onDelete` | `'restrict'` | What happens when the referenced record is deleted |
+
+### onDelete behavior
+
+| Action | Effect |
+|--------|--------|
+| `restrict` | Block deletion if referencing records exist (409) |
+| `cascade` | Recursively delete all referencing records (depth limit 10) |
+| `set_null` | Set the ref to `null` on all referencing records |
+| `none` | Do nothing — leave orphaned refs |
+
+`set_null` + `required: true` is rejected at schema definition time.
+Cascade deletes and `set_null` updates emit the same `*.deleted` and `*.updated` hooks as direct record operations.
+When an adapter supports batched record mutations, the full cascade plan can be committed atomically. The D1 adapter does this; custom adapters may fall back to sequential apply.
+
+### Querying
+
+Ref values are plain string IDs. Filter them like any text field:
+
+```typescript
+await db.checkin.find({ filter: { guest: guestId } })
+await db.checkin.find({ filter: { event: { in: [eventA, eventB] } } })
+```
+
+### Refs vs relationships
+
+Use **refs** for direct ownership (a checkin belongs to a guest). Use **relationships** for loose many-to-many associations (a person works at a company). They are completely independent — different storage, different API.
 
 ## Records
 
@@ -207,7 +266,7 @@ try {
 }
 ```
 
-Error codes: `DUPLICATE_RECORD`, `RECORD_NOT_FOUND`, `RELATIONSHIP_NOT_FOUND`, `LIST_NOT_FOUND`, `VALIDATION_ERROR`, `INVALID_OPERATION`.
+Error codes: `DUPLICATE_RECORD`, `RECORD_NOT_FOUND`, `RELATIONSHIP_NOT_FOUND`, `LIST_NOT_FOUND`, `VALIDATION_ERROR`, `INVALID_OPERATION`, `REF_NOT_FOUND`, `REF_CONSTRAINT`, `CASCADE_DEPTH_EXCEEDED`, `INVALID_SCHEMA`.
 
 ## Migrations
 

@@ -1,7 +1,7 @@
 export { relate } from './relate'
 export { defineSchema } from './schema'
 export { EventBus } from './events'
-export { RelateError, NotFoundError, DuplicateError, ValidationError } from './errors'
+export { RelateError, NotFoundError, DuplicateError, ValidationError, RefNotFoundError, RefConstraintError, CascadeDepthError, InvalidSchemaError } from './errors'
 export type { ErrorCode, ErrorDetail } from './errors'
 
 export type { Relate } from './relate'
@@ -14,6 +14,10 @@ export type {
   ListRelationshipsOptions,
   PaginatedResult,
   UpsertResult,
+  RecordMutation,
+  UpdateRecordMutation,
+  DeleteRecordMutation,
+  CleanupRecordRefsMutation,
   Migration,
   CreateListInput,
   ListListsOptions,
@@ -33,6 +37,8 @@ export type {
   FilterOperator,
   RelationshipSchema,
   SchemaDefinition,
+  RefAttributeSchema,
+  OnDeleteAction,
 } from './types'
 export type {
   EventHandler,

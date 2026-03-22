@@ -1,5 +1,5 @@
 import { type RelateRecord, type ObjectSchema, type UpsertResult, NotFoundError, ValidationError } from '@nokto-labs/relate'
-import type { D1Database } from '../d1-types'
+import type { D1Database, D1PreparedStatement } from '../d1-types'
 import { tableName } from '../migrations'
 import { valueToSql, rowToRecord, assertSafeKey } from '../utils'
 
@@ -129,11 +129,45 @@ export async function updateRecord(
   return { ...existing, ...attributes, updatedAt: new Date(now) } as RelateRecord
 }
 
+export function updateRecordStatement(
+  db: D1Database,
+  objectSlug: string,
+  objectSchema: ObjectSchema,
+  id: string,
+  attributes: Record<string, unknown>,
+  updatedAtMs: number,
+): D1PreparedStatement {
+  const table = tableName(objectSlug)
+  const attrEntries = Object.entries(attributes)
+
+  if (attrEntries.length === 0) {
+    return db.prepare(`UPDATE ${table} SET updated_at = ? WHERE id = ?`).bind(updatedAtMs, id)
+  }
+
+  const setClauses = attrEntries.map(([k]) => `${k} = ?`).join(', ')
+  const values = attrEntries.map(([k, v]) => {
+    const attrSchema = objectSchema.attributes[k]
+    return attrSchema ? valueToSql(attrSchema, v, k) : v
+  })
+
+  return db
+    .prepare(`UPDATE ${table} SET ${setClauses}, updated_at = ? WHERE id = ?`)
+    .bind(...values, updatedAtMs, id)
+}
+
 export async function deleteRecord(
   db: D1Database,
   objectSlug: string,
   id: string,
 ): Promise<void> {
+  await deleteRecordStatement(db, objectSlug, id).run()
+}
+
+export function deleteRecordStatement(
+  db: D1Database,
+  objectSlug: string,
+  id: string,
+): D1PreparedStatement {
   const table = tableName(objectSlug)
-  await db.prepare(`DELETE FROM ${table} WHERE id = ?`).bind(id).run()
+  return db.prepare(`DELETE FROM ${table} WHERE id = ?`).bind(id)
 }

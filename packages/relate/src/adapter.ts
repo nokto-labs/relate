@@ -21,6 +21,31 @@ export interface UpsertResult<T = RelateRecord> {
   isNew: boolean
 }
 
+export interface UpdateRecordMutation {
+  type: 'update'
+  objectSlug: string
+  id: string
+  attributes: Record<string, unknown>
+  updatedAtMs: number
+}
+
+export interface DeleteRecordMutation {
+  type: 'delete'
+  objectSlug: string
+  id: string
+}
+
+export interface CleanupRecordRefsMutation {
+  type: 'cleanup'
+  objectSlug: string
+  id: string
+}
+
+export type RecordMutation =
+  | UpdateRecordMutation
+  | DeleteRecordMutation
+  | CleanupRecordRefsMutation
+
 // ─── Relationship inputs ─────────────────────────────────────────────────────
 
 export interface CreateRelationshipInput<S extends SchemaInput = SchemaInput> {
@@ -109,6 +134,8 @@ export interface StorageAdapter {
   deleteRecord(objectSlug: string, id: string): Promise<void>
   /** Clean up relationships and list memberships for a deleted record */
   cleanupRecordRefs?(objectSlug: string, id: string): Promise<void>
+  /** Apply multiple record mutations atomically when the adapter supports it */
+  commitRecordMutations?(mutations: RecordMutation[]): Promise<void>
 
   // Relationships
   createRelationship(input: CreateRelationshipInput): Promise<Relationship>

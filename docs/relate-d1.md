@@ -96,9 +96,12 @@ Migrations are idempotent — re-running skips already-applied migrations.
 | Relate type | SQLite type |
 |-------------|-------------|
 | `text`, `email`, `url`, `select` | `TEXT` |
+| `ref` | `TEXT` (auto-indexed) |
 | `number` | `REAL` |
 | `boolean` | `INTEGER` (1/0) |
 | `date` | `INTEGER` (ms timestamp) |
+
+Ref cascade deletes and `set_null` updates are committed through a single D1 `batch()` call, so the full record-mutation plan is atomic on D1.
 
 ## With Cloudflare Workers
 

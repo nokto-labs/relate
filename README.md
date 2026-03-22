@@ -7,6 +7,7 @@ Build any record-based app on Cloudflare. Define your domain in TypeScript, get 
 ## What you get
 
 - **Typed records** — schema-defined objects with validation, filtering, and cursor pagination
+- **Refs** — foreign-key-like attributes with cascade/restrict/set_null delete behavior
 - **Relationships** — first-class typed links between any records
 - **Activity tracking** — immutable event log per record (state changes, emails, deploys, anything)
 - **Lists** — static collections and dynamic saved filters that resolve live
@@ -31,9 +32,12 @@ const schema = defineSchema({
       attributes: { domain: { type: 'text', required: true }, name: 'text' },
       uniqueBy: 'domain',
     },
-  },
-  relationships: {
-    works_at: { from: 'person', to: 'company' },
+    deal: {
+      attributes: {
+        title: { type: 'text', required: true },
+        owner: { type: 'ref', object: 'person', onDelete: 'set_null' },
+      },
+    },
   },
 })
 

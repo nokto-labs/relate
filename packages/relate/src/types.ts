@@ -2,10 +2,21 @@
 
 export type AttributeTypeName = 'text' | 'number' | 'boolean' | 'date' | 'email' | 'url'
 
+export type OnDeleteAction = 'restrict' | 'cascade' | 'set_null' | 'none'
+
+export interface RefAttributeSchema {
+  type: 'ref'
+  object: string
+  required?: boolean
+  validate?: boolean
+  onDelete?: OnDeleteAction
+}
+
 export type AttributeSchema =
   | AttributeTypeName
   | { type: AttributeTypeName; required?: boolean }
   | { type: 'select'; options: readonly string[]; required?: boolean }
+  | RefAttributeSchema
 
 // ─── Object schema ───────────────────────────────────────────────────────────
 
@@ -46,6 +57,7 @@ type InferAttributeType<A extends AttributeSchema> =
   : A extends { type: 'url' } ? string
   : A extends { type: 'select'; options: infer O extends readonly string[] } ? O[number]
   : A extends { type: 'select' } ? string
+  : A extends { type: 'ref' } ? string
   : unknown
 
 type IsRequired<A extends AttributeSchema> = A extends { required: true } ? true : false

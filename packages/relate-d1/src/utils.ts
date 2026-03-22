@@ -9,7 +9,7 @@ export function valueToSql(schema: AttributeSchema, value: unknown, field?: stri
   if (value === null || value === undefined) return null
   const type = attributeType(schema)
 
-  if (type === 'text' || type === 'email' || type === 'url') {
+  if (type === 'text' || type === 'email' || type === 'url' || type === 'ref') {
     if (typeof value !== 'string') {
       throw new ValidationError({ message: `Invalid value for attribute "${field ?? 'unknown'}": expected ${type}`, field })
     }
@@ -56,7 +56,7 @@ export function filterValueToSql(schema: AttributeSchema, value: unknown, field?
   if (value === null || value === undefined) return null
   const type = attributeType(schema)
 
-  if (type === 'text' || type === 'email' || type === 'url' || type === 'select') {
+  if (type === 'text' || type === 'email' || type === 'url' || type === 'select' || type === 'ref') {
     if (typeof value !== 'string') {
       throw new ValidationError({ message: `Invalid value for attribute "${field ?? 'unknown'}": expected ${type}`, field })
     }

@@ -1,8 +1,9 @@
 import type { StorageAdapter, PaginatedResult } from '../adapter'
-import type { RelateRecord, ObjectSchema, InferAttributes, FilterOperator } from '../types'
+import type { RelateRecord, ObjectSchema, SchemaInput, InferAttributes, FilterOperator } from '../types'
 import type { EventBus } from '../events'
 import { DuplicateError, ValidationError, NotFoundError } from '../errors'
 import { validateAttributes } from '../validation'
+import { validateRefs, planRecordDelete, applyRecordMutationPlan } from '../ref-integrity'
 
 type FilterInput<S extends ObjectSchema> = {
   [K in keyof InferAttributes<S>]?: InferAttributes<S>[K] | FilterOperator<InferAttributes<S>[K]>
@@ -13,12 +14,14 @@ export class ObjectClient<S extends ObjectSchema> {
     private readonly adapter: StorageAdapter,
     private readonly slug: string,
     private readonly schema: S,
+    private readonly fullSchema: SchemaInput,
     private readonly events?: EventBus,
     private readonly dbRef?: () => unknown,
   ) {}
 
   async create(attributes: InferAttributes<S>): Promise<RelateRecord<S>> {
     validateAttributes(this.slug, this.schema, attributes as Record<string, unknown>)
+    await validateRefs(this.adapter, this.fullSchema, this.slug, attributes as Record<string, unknown>)
 
     if (this.schema.uniqueBy) {
       const key = this.schema.uniqueBy
@@ -44,6 +47,7 @@ export class ObjectClient<S extends ObjectSchema> {
 
   async upsert(attributes: InferAttributes<S>): Promise<RelateRecord<S>> {
     validateAttributes(this.slug, this.schema, attributes as Record<string, unknown>)
+    await validateRefs(this.adapter, this.fullSchema, this.slug, attributes as Record<string, unknown>)
 
     if (!this.schema.uniqueBy) {
       throw new ValidationError({
@@ -111,6 +115,7 @@ export class ObjectClient<S extends ObjectSchema> {
 
   async update(id: string, attributes: Partial<InferAttributes<S>>): Promise<RelateRecord<S>> {
     validateAttributes(this.slug, this.schema, attributes as Record<string, unknown>, { partial: true })
+    await validateRefs(this.adapter, this.fullSchema, this.slug, attributes as Record<string, unknown>)
 
     const record = await this.adapter.updateRecord(
       this.slug,
@@ -131,8 +136,22 @@ export class ObjectClient<S extends ObjectSchema> {
       throw new NotFoundError({ code: 'RECORD_NOT_FOUND', object: this.slug, id }, `Record "${id}" not found in "${this.slug}"`)
     }
 
-    await this.adapter.deleteRecord(this.slug, id)
-    await this.adapter.cleanupRecordRefs?.(this.slug, id)
-    await this.events?.emit(`${this.slug}.deleted`, { id, db: this.dbRef?.() })
+    const plan = await planRecordDelete(this.adapter, this.fullSchema, this.slug, id)
+    plan.push({ type: 'cleanup', objectSlug: this.slug, id })
+    plan.push({ type: 'delete', objectSlug: this.slug, id })
+
+    const events = await applyRecordMutationPlan(this.adapter, plan)
+
+    for (const event of events) {
+      if (event.type === 'updated') {
+        await this.events?.emit(`${event.objectSlug}.updated`, {
+          record: event.record,
+          changes: event.changes,
+          db: this.dbRef?.(),
+        })
+      } else {
+        await this.events?.emit(`${event.objectSlug}.deleted`, { id: event.id, db: this.dbRef?.() })
+      }
+    }
   }
 }

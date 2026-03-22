@@ -81,6 +81,16 @@ function assertValidValue(
       }
       return
     }
+    case 'ref':
+      if (typeof value !== 'string') {
+        throw new ValidationError({
+          message: `Invalid value for attribute "${key}" on "${objectSlug}": expected string ID`,
+          object: objectSlug,
+          field: key,
+          expected: 'ref',
+        })
+      }
+      return
     default:
       return
   }

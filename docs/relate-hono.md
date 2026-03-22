@@ -43,6 +43,38 @@ export default app
 
 Query params for list: `limit`, `offset`, `orderBy`, `order`, `cursor`, plus filter params.
 
+### Nested ref routes
+
+For each unambiguous `ref` attribute, nested routes are automatically generated:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/:parentPlural/:parentId/:childPlural` | List child records filtered by ref |
+| `POST` | `/:parentPlural/:parentId/:childPlural` | Create child with parent ID injected |
+
+Example: if `checkin` has `event: { type: 'ref', object: 'event' }`:
+
+```
+GET  /events/:eventId/checkins         → list checkins for event
+POST /events/:eventId/checkins         → create checkin with event = eventId
+```
+
+Flat routes still work alongside nested routes (`GET /checkins?event=id`). No nested `PUT`/`DELETE` — use flat `/checkins/:id` for those.
+
+If a child object has multiple refs to the same parent object, the short path would be ambiguous. In that case, Relate generates explicit ref-field paths instead:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/:parentPlural/:parentId/:childPlural/by/<refField>` | List child records filtered by a specific ref field |
+| `POST` | `/:parentPlural/:parentId/:childPlural/by/<refField>` | Create child with a specific ref field injected |
+
+Example: if `message` has both `author` and `reviewer` refs to `user`:
+
+```
+GET  /users/:userId/messages/by/author
+POST /users/:userId/messages/by/reviewer
+```
+
 ### Filtering
 
 ```
@@ -168,6 +200,9 @@ All SDK errors are automatically mapped to HTTP status codes:
 | `LIST_NOT_FOUND` | 404 |
 | `VALIDATION_ERROR` | 400 |
 | `INVALID_OPERATION` | 400 |
+| `REF_NOT_FOUND` | 400 |
+| `REF_CONSTRAINT` | 409 |
+| `CASCADE_DEPTH_EXCEEDED` | 500 |
 
 Response format:
 
