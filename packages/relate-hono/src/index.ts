@@ -23,7 +23,7 @@ export interface RouteToggles {
 
 export interface RelateRoutesConfig<E extends object> {
   schema: SchemaDefinition
-  crm: (c: { env: E }) => AnyRelate
+  db: (c: { env: E }) => AnyRelate
   events?: EventBus
   prefix?: string
   middleware?: MiddlewareFn | MiddlewareFn[]
@@ -38,21 +38,21 @@ export interface RelateRoutesConfig<E extends object> {
  * ```ts
  * const events = new EventBus()
  *
- * events.on('person.created', async ({ record, crm }) => {
- *   await crm.person.update(record.id, { source: 'api' })
+ * events.on('person.created', async ({ record, db }) => {
+ *   await db.person.update(record.id, { source: 'api' })
  * })
  *
  * app.route('/', relateRoutes({
  *   schema,
  *   events,
- *   crm: (c) => relate({ adapter: new D1Adapter(c.env.DB), schema, events }),
+ *   db: (c) => relate({ adapter: new D1Adapter(c.env.DB), schema, events }),
  * }))
  * ```
  */
 export function relateRoutes<E extends object = Record<string, unknown>>(
   config: RelateRoutesConfig<E>,
 ): Hono<{ Bindings: E }> {
-  const { schema, crm: getCRM, prefix, middleware, routes: toggles, maxLimit } = config
+  const { schema, db: getDB, prefix, middleware, routes: toggles, maxLimit } = config
   const objects = schema.objects
   const enabled = (key: keyof RouteToggles) => toggles?.[key] !== false
 
@@ -82,7 +82,7 @@ export function relateRoutes<E extends object = Record<string, unknown>>(
 
   // Relate instance per request
   app.use('*', async (c, next) => {
-    c.set('crm', getCRM(c))
+    c.set('db', getDB(c))
     if (maxLimit) c.set('maxLimit', maxLimit)
     await next()
   })

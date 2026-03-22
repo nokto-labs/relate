@@ -32,7 +32,7 @@ export async function trackActivity(
 
   await db
     .prepare(
-      `INSERT INTO crm_activities
+      `INSERT INTO relate_activities
         (id, record_id, object_slug, type, data, occurred_at, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
     )
@@ -81,7 +81,7 @@ export async function listActivities(
   }
 
   const where = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : ''
-  let sql = `SELECT * FROM crm_activities ${where} ORDER BY occurred_at DESC`
+  let sql = `SELECT * FROM relate_activities ${where} ORDER BY occurred_at DESC`
 
   if (options?.limit !== undefined) {
     sql += ' LIMIT ?'

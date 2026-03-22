@@ -21,7 +21,7 @@ const app = new Hono()
 app.route('/', relateRoutes({
   schema,
   events,
-  crm: (c) => relate({ adapter: new D1Adapter(c.env.DB), schema, events }),
+  db: (c) => relate({ adapter: new D1Adapter(c.env.DB), schema, events }),
 }))
 
 export default app
@@ -32,7 +32,7 @@ export default app
 ```typescript
 relateRoutes({
   schema,
-  crm: (c) => relate({ ... }),
+  db: (c) => relate({ ... }),
   events,                         // shared EventBus
   prefix: '/api/v1',              // prefix all routes
   middleware: [auth],             // run before every route

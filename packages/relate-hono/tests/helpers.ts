@@ -42,7 +42,7 @@ async function getDB(): Promise<D1Database> {
   return db
 }
 
-const TABLES = ['crm_person', 'crm_deal', 'crm_relationships', 'crm_activities', 'crm_lists', 'crm_list_items', 'crm_migrations']
+const TABLES = ['relate_person', 'relate_deal', 'relate_relationships', 'relate_activities', 'relate_lists', 'relate_list_items', 'relate_migrations']
 
 export async function resetDB() {
   const d1 = await getDB()
@@ -61,7 +61,7 @@ export async function createTestApp(overrides?: Record<string, unknown>) {
 
   const app = relateRoutes({
     schema: testSchema,
-    crm: () => relate({ adapter: new D1Adapter(d1), schema: testSchema, events }),
+    db: () => relate({ adapter: new D1Adapter(d1), schema: testSchema, events }),
     events,
     ...overrides,
   } as any)

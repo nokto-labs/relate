@@ -14,7 +14,7 @@ export class ObjectClient<S extends ObjectSchema> {
     private readonly slug: string,
     private readonly schema: S,
     private readonly events?: EventBus,
-    private readonly crmRef?: () => unknown,
+    private readonly dbRef?: () => unknown,
   ) {}
 
   async create(attributes: InferAttributes<S>): Promise<RelateRecord<S>> {
@@ -38,7 +38,7 @@ export class ObjectClient<S extends ObjectSchema> {
       this.slug,
       attributes as Record<string, unknown>,
     ) as RelateRecord<S>
-    await this.events?.emit(`${this.slug}.created`, { record, crm: this.crmRef?.() })
+    await this.events?.emit(`${this.slug}.created`, { record, db: this.dbRef?.() })
     return record
   }
 
@@ -59,8 +59,8 @@ export class ObjectClient<S extends ObjectSchema> {
     )
     const event = isNew ? 'created' : 'updated'
     const payload = isNew
-      ? { record, crm: this.crmRef?.() }
-      : { record, changes: attributes as Record<string, unknown>, crm: this.crmRef?.() }
+      ? { record, db: this.dbRef?.() }
+      : { record, changes: attributes as Record<string, unknown>, db: this.dbRef?.() }
     await this.events?.emit(`${this.slug}.${event}`, payload)
     return record as RelateRecord<S>
   }
@@ -120,7 +120,7 @@ export class ObjectClient<S extends ObjectSchema> {
     await this.events?.emit(`${this.slug}.updated`, {
       record,
       changes: attributes as Record<string, unknown>,
-      crm: this.crmRef?.(),
+      db: this.dbRef?.(),
     })
     return record
   }
@@ -133,6 +133,6 @@ export class ObjectClient<S extends ObjectSchema> {
 
     await this.adapter.deleteRecord(this.slug, id)
     await this.adapter.cleanupRecordRefs?.(this.slug, id)
-    await this.events?.emit(`${this.slug}.deleted`, { id, crm: this.crmRef?.() })
+    await this.events?.emit(`${this.slug}.deleted`, { id, db: this.dbRef?.() })
   }
 }

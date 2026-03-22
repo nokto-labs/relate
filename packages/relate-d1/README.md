@@ -11,13 +11,13 @@ import { relate } from '@nokto-labs/relate'
 import { D1Adapter } from '@nokto-labs/relate-d1'
 import { schema } from './schema'
 
-const crm = relate({
+const db = relate({
   adapter: new D1Adapter(env.DB),
   schema,
 })
 
-await crm.migrate()
-await crm.person.create({ email: 'alice@acme.com', name: 'Alice' })
+await db.migrate()
+await db.person.create({ email: 'alice@acme.com', name: 'Alice' })
 ```
 
 ## Migration helpers
@@ -25,7 +25,7 @@ await crm.person.create({ email: 'alice@acme.com', name: 'Alice' })
 ```typescript
 import { renameColumn, dropColumn } from '@nokto-labs/relate-d1'
 
-await crm.applyMigrations([
+await db.applyMigrations([
   { id: '001', async up(db) { await renameColumn(db, 'person', 'tier', 'plan') } },
 ])
 ```

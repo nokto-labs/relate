@@ -1,15 +1,15 @@
 import { describe, it, expect, beforeEach, afterAll } from 'vitest'
-import { createD1TestCRM, resetDB, cleanup } from './helpers'
+import { createD1TestDB, resetDB, cleanup } from './helpers'
 
 beforeEach(resetDB)
 afterAll(cleanup)
 
 describe('D1 Activities', () => {
   it('tracks an activity with correct fields', async () => {
-    const { crm } = await createD1TestCRM()
-    const deal = await crm.deal.create({ title: 'Test' })
+    const { db } = await createD1TestDB()
+    const deal = await db.deal.create({ title: 'Test' })
 
-    const activity = await crm.activities.track({
+    const activity = await db.activities.track({
       record: { object: 'deal', id: deal.id },
       type: 'stage_changed',
       metadata: { from: 'lead', to: 'won' },
@@ -24,22 +24,22 @@ describe('D1 Activities', () => {
   })
 
   it('lists activities for a record', async () => {
-    const { crm } = await createD1TestCRM()
-    const deal = await crm.deal.create({ title: 'List' })
+    const { db } = await createD1TestDB()
+    const deal = await db.deal.create({ title: 'List' })
 
-    await crm.activities.track({ record: { object: 'deal', id: deal.id }, type: 'a' })
-    await crm.activities.track({ record: { object: 'deal', id: deal.id }, type: 'b' })
+    await db.activities.track({ record: { object: 'deal', id: deal.id }, type: 'a' })
+    await db.activities.track({ record: { object: 'deal', id: deal.id }, type: 'b' })
 
-    const list = await crm.activities.list({ object: 'deal', id: deal.id })
+    const list = await db.activities.list({ object: 'deal', id: deal.id })
     expect(list).toHaveLength(2)
   })
 
   it('backdates with occurredAt', async () => {
-    const { crm } = await createD1TestCRM()
-    const person = await crm.person.create({ email: 'backdate@test.com' })
+    const { db } = await createD1TestDB()
+    const person = await db.person.create({ email: 'backdate@test.com' })
     const past = new Date('2024-01-15T10:00:00Z')
 
-    const activity = await crm.activities.track({
+    const activity = await db.activities.track({
       record: { object: 'person', id: person.id },
       type: 'meeting',
       occurredAt: past,
@@ -49,14 +49,14 @@ describe('D1 Activities', () => {
   })
 
   it('filters by type', async () => {
-    const { crm } = await createD1TestCRM()
-    const person = await crm.person.create({ email: 'type@test.com' })
+    const { db } = await createD1TestDB()
+    const person = await db.person.create({ email: 'type@test.com' })
 
-    await crm.activities.track({ record: { object: 'person', id: person.id }, type: 'email' })
-    await crm.activities.track({ record: { object: 'person', id: person.id }, type: 'call' })
-    await crm.activities.track({ record: { object: 'person', id: person.id }, type: 'email' })
+    await db.activities.track({ record: { object: 'person', id: person.id }, type: 'email' })
+    await db.activities.track({ record: { object: 'person', id: person.id }, type: 'call' })
+    await db.activities.track({ record: { object: 'person', id: person.id }, type: 'email' })
 
-    const emails = await crm.activities.list(
+    const emails = await db.activities.list(
       { object: 'person', id: person.id },
       { type: 'email' },
     )
@@ -65,14 +65,14 @@ describe('D1 Activities', () => {
   })
 
   it('limits results', async () => {
-    const { crm } = await createD1TestCRM()
-    const deal = await crm.deal.create({ title: 'Limit' })
+    const { db } = await createD1TestDB()
+    const deal = await db.deal.create({ title: 'Limit' })
 
     for (let i = 0; i < 5; i++) {
-      await crm.activities.track({ record: { object: 'deal', id: deal.id }, type: `e${i}` })
+      await db.activities.track({ record: { object: 'deal', id: deal.id }, type: `e${i}` })
     }
 
-    const limited = await crm.activities.list(
+    const limited = await db.activities.list(
       { object: 'deal', id: deal.id },
       { limit: 2 },
     )
@@ -80,10 +80,10 @@ describe('D1 Activities', () => {
   })
 
   it('tracks activity with empty metadata', async () => {
-    const { crm } = await createD1TestCRM()
-    const deal = await crm.deal.create({ title: 'NoMeta' })
+    const { db } = await createD1TestDB()
+    const deal = await db.deal.create({ title: 'NoMeta' })
 
-    const activity = await crm.activities.track({
+    const activity = await db.activities.track({
       record: { object: 'deal', id: deal.id },
       type: 'viewed',
     })

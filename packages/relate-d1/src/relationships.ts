@@ -32,7 +32,7 @@ export async function createRelationship(
   const now = Date.now()
   await db
     .prepare(
-      `INSERT INTO crm_relationships
+      `INSERT INTO relate_relationships
         (id, from_record_id, from_object, to_record_id, to_object, type, attributes, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     )
@@ -76,7 +76,7 @@ export async function listRelationships(
   }
 
   const where = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : ''
-  let sql = `SELECT * FROM crm_relationships ${where} ORDER BY created_at DESC`
+  let sql = `SELECT * FROM relate_relationships ${where} ORDER BY created_at DESC`
 
   if (options?.limit !== undefined) {
     sql += ' LIMIT ?'
@@ -88,7 +88,7 @@ export async function listRelationships(
 }
 
 export async function deleteRelationship(db: D1Database, id: string): Promise<void> {
-  await db.prepare('DELETE FROM crm_relationships WHERE id = ?').bind(id).run()
+  await db.prepare('DELETE FROM relate_relationships WHERE id = ?').bind(id).run()
 }
 
 export async function updateRelationship(
@@ -97,14 +97,14 @@ export async function updateRelationship(
   attributes: Record<string, unknown>,
 ): Promise<Relationship> {
   const existing = await db
-    .prepare('SELECT * FROM crm_relationships WHERE id = ?')
+    .prepare('SELECT * FROM relate_relationships WHERE id = ?')
     .bind(id)
     .first<RelationshipRow>()
   if (!existing) throw new NotFoundError({ code: 'RELATIONSHIP_NOT_FOUND', id }, `Relationship "${id}" not found`)
 
   const merged = { ...JSON.parse(existing.attributes) as Record<string, unknown>, ...attributes }
   await db
-    .prepare('UPDATE crm_relationships SET attributes = ? WHERE id = ?')
+    .prepare('UPDATE relate_relationships SET attributes = ? WHERE id = ?')
     .bind(JSON.stringify(merged), id)
     .run()
 

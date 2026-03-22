@@ -52,9 +52,9 @@ async function getDB(): Promise<D1Database> {
 }
 
 const ALL_TABLES = [
-  'crm_person', 'crm_company', 'crm_deal',
-  'crm_relationships', 'crm_activities',
-  'crm_lists', 'crm_list_items', 'crm_migrations',
+  'relate_person', 'relate_company', 'relate_deal',
+  'relate_relationships', 'relate_activities',
+  'relate_lists', 'relate_list_items', 'relate_migrations',
 ]
 
 /** Wipe all data between tests */
@@ -65,13 +65,13 @@ export async function resetDB() {
   }
 }
 
-export async function createD1TestCRM() {
+export async function createD1TestDB() {
   const d1 = await getDB()
   const adapter = new D1Adapter(d1)
   const events = new EventBus()
-  const crm = relate({ adapter, schema: testSchema, events })
-  await crm.migrate()
-  return { crm, db: d1, adapter, events }
+  const db = relate({ adapter, schema: testSchema, events })
+  await db.migrate()
+  return { db, d1, adapter, events }
 }
 
 export async function cleanup() {

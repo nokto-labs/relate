@@ -21,7 +21,7 @@ const app = new Hono<{ Bindings: Env }>()
 
 app.route('/', relateRoutes({
   schema,
-  crm: (c: { env: Env }) => relate({ adapter: new D1Adapter(c.env.DB), schema }),
+  db: (c: { env: Env }) => relate({ adapter: new D1Adapter(c.env.DB), schema }),
 }))
 
 export default app
@@ -105,7 +105,7 @@ Returns `{ records: [...], nextCursor: "..." }`.
 app.route('/', relateRoutes({
   // Required
   schema,
-  crm: (c: { env: Env }) => relate({ adapter: new D1Adapter(c.env.DB), schema }),
+  db: (c: { env: Env }) => relate({ adapter: new D1Adapter(c.env.DB), schema }),
 
   // Optional
   events,                          // shared EventBus for hooks
@@ -136,7 +136,7 @@ const auth: MiddlewareHandler = async (c, next) => {
 
 app.route('/', relateRoutes({
   schema,
-  crm: (c: { env: Env }) => relate({ adapter: new D1Adapter(c.env.DB), schema }),
+  db: (c: { env: Env }) => relate({ adapter: new D1Adapter(c.env.DB), schema }),
   middleware: auth,
 }))
 ```
@@ -145,7 +145,7 @@ app.route('/', relateRoutes({
 
 ```typescript
 // All routes under /api/v1
-app.route('/', relateRoutes({ schema, crm, prefix: '/api/v1' }))
+app.route('/', relateRoutes({ schema, db, prefix: '/api/v1' }))
 // → POST /api/v1/people, GET /api/v1/relationships, etc.
 ```
 
@@ -153,7 +153,7 @@ app.route('/', relateRoutes({ schema, crm, prefix: '/api/v1' }))
 
 ```typescript
 // No list or activity endpoints
-app.route('/', relateRoutes({ schema, crm, routes: { lists: false, activities: false } }))
+app.route('/', relateRoutes({ schema, db, routes: { lists: false, activities: false } }))
 ```
 
 ## Errors

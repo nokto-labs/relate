@@ -20,5 +20,5 @@ export type AnyObjectClient = {
 }
 
 export type HonoEnv = {
-  Variables: { crm: AnyRelate; maxLimit?: number }
+  Variables: { db: AnyRelate; maxLimit?: number }
 }

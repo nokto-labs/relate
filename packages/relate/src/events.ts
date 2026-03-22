@@ -4,18 +4,18 @@ import type { RelateRecord, ObjectSchema } from './types'
 
 export interface CreatedEvent<S extends ObjectSchema = ObjectSchema> {
   record: RelateRecord<S>
-  crm: unknown
+  db: unknown
 }
 
 export interface UpdatedEvent<S extends ObjectSchema = ObjectSchema> {
   record: RelateRecord<S>
   changes: Partial<Record<string, unknown>>
-  crm: unknown
+  db: unknown
 }
 
 export interface DeletedEvent {
   id: string
-  crm: unknown
+  db: unknown
 }
 
 export type EventPayload<S extends ObjectSchema = ObjectSchema> =

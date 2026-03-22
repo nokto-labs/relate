@@ -7,18 +7,18 @@ import { capLimit } from '../limits'
 export function recordRoutes(objects: SchemaInput, pluralToSlug: Record<string, string>) {
   const app = new Hono<HonoEnv>()
 
-  function resolveResource(crm: AnyRelate, plural: string): { client: AnyObjectClient; objectSchema: ObjectSchema } | null {
+  function resolveResource(db: AnyRelate, plural: string): { client: AnyObjectClient; objectSchema: ObjectSchema } | null {
     const slug = pluralToSlug[plural]
     if (!slug) return null
-    const client = (crm as unknown as Record<string, AnyObjectClient>)[slug]
+    const client = (db as unknown as Record<string, AnyObjectClient>)[slug]
     const objectSchema = objects[slug]
     if (!client || !objectSchema) return null
     return { client, objectSchema }
   }
 
   app.post('/:plural', async (c) => {
-    const crm = c.get('crm')
-    const resource = resolveResource(crm, c.req.param('plural'))
+    const db =c.get('db')
+    const resource = resolveResource(db, c.req.param('plural'))
     if (!resource) return c.json({ error: `Unknown resource: ${c.req.param('plural')}` }, 404)
 
     const body = await c.req.json<Record<string, unknown>>()
@@ -26,8 +26,8 @@ export function recordRoutes(objects: SchemaInput, pluralToSlug: Record<string, 
   })
 
   app.put('/:plural', async (c) => {
-    const crm = c.get('crm')
-    const resource = resolveResource(crm, c.req.param('plural'))
+    const db =c.get('db')
+    const resource = resolveResource(db, c.req.param('plural'))
     if (!resource) return c.json({ error: `Unknown resource: ${c.req.param('plural')}` }, 404)
 
     const body = await c.req.json<Record<string, unknown>>()
@@ -35,8 +35,8 @@ export function recordRoutes(objects: SchemaInput, pluralToSlug: Record<string, 
   })
 
   app.get('/:plural/count', async (c) => {
-    const crm = c.get('crm')
-    const resource = resolveResource(crm, c.req.param('plural'))
+    const db =c.get('db')
+    const resource = resolveResource(db, c.req.param('plural'))
     if (!resource) return c.json({ error: `Unknown resource: ${c.req.param('plural')}` }, 404)
 
     const filter = parseFilters(c.req.queries() ?? {}, resource.objectSchema)
@@ -44,8 +44,8 @@ export function recordRoutes(objects: SchemaInput, pluralToSlug: Record<string, 
   })
 
   app.get('/:plural/:id', async (c) => {
-    const crm = c.get('crm')
-    const resource = resolveResource(crm, c.req.param('plural'))
+    const db =c.get('db')
+    const resource = resolveResource(db, c.req.param('plural'))
     if (!resource) return c.json({ error: `Unknown resource: ${c.req.param('plural')}` }, 404)
 
     const record = await resource.client.get(c.req.param('id'))
@@ -54,8 +54,8 @@ export function recordRoutes(objects: SchemaInput, pluralToSlug: Record<string, 
   })
 
   app.get('/:plural', async (c) => {
-    const crm = c.get('crm')
-    const resource = resolveResource(crm, c.req.param('plural'))
+    const db =c.get('db')
+    const resource = resolveResource(db, c.req.param('plural'))
     if (!resource) return c.json({ error: `Unknown resource: ${c.req.param('plural')}` }, 404)
 
     const orderBy = c.req.query('orderBy')
@@ -74,8 +74,8 @@ export function recordRoutes(objects: SchemaInput, pluralToSlug: Record<string, 
   })
 
   app.patch('/:plural/:id', async (c) => {
-    const crm = c.get('crm')
-    const resource = resolveResource(crm, c.req.param('plural'))
+    const db =c.get('db')
+    const resource = resolveResource(db, c.req.param('plural'))
     if (!resource) return c.json({ error: `Unknown resource: ${c.req.param('plural')}` }, 404)
 
     const body = await c.req.json<Record<string, unknown>>()
@@ -83,8 +83,8 @@ export function recordRoutes(objects: SchemaInput, pluralToSlug: Record<string, 
   })
 
   app.delete('/:plural/:id', async (c) => {
-    const crm = c.get('crm')
-    const resource = resolveResource(crm, c.req.param('plural'))
+    const db =c.get('db')
+    const resource = resolveResource(db, c.req.param('plural'))
     if (!resource) return c.json({ error: `Unknown resource: ${c.req.param('plural')}` }, 404)
 
     await resource.client.delete(c.req.param('id'))

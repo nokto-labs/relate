@@ -12,10 +12,10 @@ export async function cleanupRecordRefs(
   await db.batch([
     // Remove relationships where this record is on either side
     db.prepare(
-      'DELETE FROM crm_relationships WHERE (from_record_id = ? AND from_object = ?) OR (to_record_id = ? AND to_object = ?)'
+      'DELETE FROM relate_relationships WHERE (from_record_id = ? AND from_object = ?) OR (to_record_id = ? AND to_object = ?)'
     ).bind(id, objectSlug, id, objectSlug),
 
     // Remove from any static lists
-    db.prepare('DELETE FROM crm_list_items WHERE record_id = ?').bind(id),
+    db.prepare('DELETE FROM relate_list_items WHERE record_id = ?').bind(id),
   ])
 }

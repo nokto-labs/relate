@@ -17,7 +17,7 @@ export async function createList(
 
   await db
     .prepare(
-      `INSERT INTO crm_lists (id, name, object_slug, type, filter, created_at, updated_at)
+      `INSERT INTO relate_lists (id, name, object_slug, type, filter, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(id, input.name, input.object, input.type, input.filter ? JSON.stringify(input.filter) : null, now, now)
@@ -39,7 +39,7 @@ export async function getList(
   id: string,
 ): Promise<RelateList | null> {
   const row = await db
-    .prepare('SELECT * FROM crm_lists WHERE id = ?')
+    .prepare('SELECT * FROM relate_lists WHERE id = ?')
     .bind(id)
     .first<ListRow>()
   return row ? rowToList(row) : null
@@ -62,7 +62,7 @@ export async function listLists(
   }
 
   const where = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : ''
-  let sql = `SELECT * FROM crm_lists ${where} ORDER BY created_at DESC`
+  let sql = `SELECT * FROM relate_lists ${where} ORDER BY created_at DESC`
 
   if (options?.limit !== undefined) {
     sql += ' LIMIT ?'
@@ -107,7 +107,7 @@ export async function updateList(
   bindings.push(id)
 
   await db
-    .prepare(`UPDATE crm_lists SET ${sets.join(', ')} WHERE id = ?`)
+    .prepare(`UPDATE relate_lists SET ${sets.join(', ')} WHERE id = ?`)
     .bind(...bindings)
     .run()
 
@@ -121,7 +121,7 @@ export async function updateList(
 
 export async function deleteList(db: D1Database, id: string): Promise<void> {
   await db.batch([
-    db.prepare('DELETE FROM crm_list_items WHERE list_id = ?').bind(id),
-    db.prepare('DELETE FROM crm_lists WHERE id = ?').bind(id),
+    db.prepare('DELETE FROM relate_list_items WHERE list_id = ?').bind(id),
+    db.prepare('DELETE FROM relate_lists WHERE id = ?').bind(id),
   ])
 }

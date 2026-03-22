@@ -24,12 +24,12 @@ const schema = defineSchema({
   },
 })
 
-const crm = relate({
+const db = relate({
   adapter: new D1Adapter(db), // pass your D1 binding
   schema,
 })
 
-await crm.migrate()
+await db.migrate()
 ```
 
 ## Wrangler config
@@ -53,12 +53,12 @@ await crm.migrate()
 
 | Table | Purpose |
 |-------|---------|
-| `crm_{object}` | One per object (e.g. `crm_person`, `crm_company`) |
-| `crm_relationships` | Bidirectional relationships between records |
-| `crm_activities` | Immutable event log |
-| `crm_lists` | Static and dynamic list definitions |
-| `crm_list_items` | Static list membership |
-| `crm_migrations` | Migration tracking |
+| `relate_{object}` | One per object (e.g. `relate_person`, `relate_company`) |
+| `relate_relationships` | Bidirectional relationships between records |
+| `relate_activities` | Immutable event log |
+| `relate_lists` | Static and dynamic list definitions |
+| `relate_list_items` | Static list membership |
+| `relate_migrations` | Migration tracking |
 
 New attributes added to the schema automatically become new columns via `ALTER TABLE ADD COLUMN`.
 
@@ -69,7 +69,7 @@ For structural changes (rename/drop columns), use tracked migrations:
 ```typescript
 import { renameColumn, dropColumn } from '@nokto-labs/relate-d1'
 
-await crm.applyMigrations([
+await db.applyMigrations([
   {
     id: '001_rename_tier_to_plan',
     async up(db) {
@@ -115,7 +115,7 @@ const app = new Hono<{ Bindings: Env }>()
 
 app.route('/', relateRoutes({
   schema,
-  crm: (c: { env: Env }) => relate({ adapter: new D1Adapter(c.env.DB), schema }),
+  db: (c: { env: Env }) => relate({ adapter: new D1Adapter(c.env.DB), schema }),
 }))
 
 export default app

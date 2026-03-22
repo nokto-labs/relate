@@ -116,9 +116,9 @@ export const testSchema = defineSchema({
 
 // ─── Test context factory ────────────────────────────────────────────────────
 
-export function createTestCRM(schema: SchemaDefinition = testSchema) {
+export function createTestDB(schema: SchemaDefinition = testSchema) {
   const adapter = createMockAdapter()
   const events = new EventBus()
-  const crm = relate({ adapter, schema, events })
-  return { crm, adapter, events }
+  const db = relate({ adapter, schema, events })
+  return { db, adapter, events }
 }

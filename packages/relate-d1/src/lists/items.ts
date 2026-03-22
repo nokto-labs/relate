@@ -27,7 +27,7 @@ export async function addToList(
   await db.batch(
     recordIds.map((recordId) =>
       db
-        .prepare('INSERT OR IGNORE INTO crm_list_items (list_id, record_id, added_at) VALUES (?, ?, ?)')
+        .prepare('INSERT OR IGNORE INTO relate_list_items (list_id, record_id, added_at) VALUES (?, ?, ?)')
         .bind(listId, recordId, now),
     ),
   )
@@ -46,7 +46,7 @@ export async function removeFromList(
   await db.batch(
     recordIds.map((recordId) =>
       db
-        .prepare('DELETE FROM crm_list_items WHERE list_id = ? AND record_id = ?')
+        .prepare('DELETE FROM relate_list_items WHERE list_id = ? AND record_id = ?')
         .bind(listId, recordId),
     ),
   )
@@ -94,7 +94,7 @@ export async function listItems(
   const limit = options?.limit ?? 50
 
   const sql = `SELECT r.*, m.added_at as _added_at FROM ${table} r
-    INNER JOIN crm_list_items m ON m.record_id = r.id
+    INNER JOIN relate_list_items m ON m.record_id = r.id
     ${where}
     ORDER BY m.added_at DESC, r.id DESC
     LIMIT ?`
@@ -136,14 +136,14 @@ export async function countListItems(
     parseFilterClauses(filter, clauses, bindings, objectSchema)
     const where = `WHERE ${clauses.join(' AND ')}`
     const row = await db
-      .prepare(`SELECT COUNT(*) as n FROM ${table} r INNER JOIN crm_list_items m ON m.record_id = r.id ${where}`)
+      .prepare(`SELECT COUNT(*) as n FROM ${table} r INNER JOIN relate_list_items m ON m.record_id = r.id ${where}`)
       .bind(...bindings)
       .first<{ n: number }>()
     return row?.n ?? 0
   }
 
   const row = await db
-    .prepare('SELECT COUNT(*) as n FROM crm_list_items WHERE list_id = ?')
+    .prepare('SELECT COUNT(*) as n FROM relate_list_items WHERE list_id = ?')
     .bind(listId)
     .first<{ n: number }>()
   return row?.n ?? 0

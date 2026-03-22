@@ -2,7 +2,7 @@
 
 Build any record-based app on Cloudflare. Define your domain in TypeScript, get a typed SDK and REST API instantly.
 
-**CRM, helpdesk, inventory, issue tracker, project management** — the pattern is always the same: objects, relationships between them, and what happened to them over time. Relate gives you the primitives so you don't build them from scratch.
+**Helpdesk, inventory, issue tracker, project management** — the pattern is always the same: objects, relationships between them, and what happened to them over time. Relate gives you the primitives so you don't build them from scratch.
 
 ## What you get
 
@@ -45,7 +45,7 @@ await db.person.create({ email: 'alice@acme.com', name: 'Alice' })
 // Or expose as REST API
 app.route('/', relateRoutes({
   schema,
-  crm: (c) => relate({ adapter: new D1Adapter(c.env.DB), schema }),
+  db: (c) => relate({ adapter: new D1Adapter(c.env.DB), schema }),
 }))
 ```
 

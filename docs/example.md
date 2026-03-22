@@ -68,9 +68,9 @@ interface Env {
 
 const events = new EventBus()
 
-events.on('person.created', async ({ record, crm }: any) => {
+events.on('person.created', async ({ record, db }: any) => {
   console.log(`New person: ${record.email}`)
-  await crm.person.update(record.id, { source: 'api' })
+  await db.person.update(record.id, { source: 'api' })
 })
 
 events.on('deal.updated', ({ record, changes }: any) => {
@@ -84,7 +84,7 @@ const app = new Hono<{ Bindings: Env }>()
 app.route('/', relateRoutes({
   schema,
   events,
-  crm: (c: { env: Env }) => relate({ adapter: new D1Adapter(c.env.DB), schema, events }),
+  db: (c: { env: Env }) => relate({ adapter: new D1Adapter(c.env.DB), schema, events }),
 }))
 
 export default app

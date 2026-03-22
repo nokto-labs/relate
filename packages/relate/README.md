@@ -25,11 +25,11 @@ const schema = defineSchema({
   },
 })
 
-const crm = relate({ adapter, schema })
+const db = relate({ adapter, schema })
 
-await crm.person.create({ email: 'alice@acme.com', name: 'Alice', tier: 'vip' })
-await crm.person.find({ filter: { tier: 'vip' } })
-await crm.person.findPage({ limit: 20 })
+await db.person.create({ email: 'alice@acme.com', name: 'Alice', tier: 'vip' })
+await db.person.find({ filter: { tier: 'vip' } })
+await db.person.findPage({ limit: 20 })
 ```
 
 Records, relationships, activities, lists, filtering, cursor pagination, hooks, migrations, structured errors — all from one schema.

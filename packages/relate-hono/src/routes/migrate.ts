@@ -5,8 +5,8 @@ export function migrateRoutes() {
   const app = new Hono<HonoEnv>()
 
   app.post('/migrate', async (c) => {
-    const crm = c.get('crm')
-    await crm.migrate()
+    const db = c.get('db')
+    await db.migrate()
     return c.json({ ok: true })
   })
 

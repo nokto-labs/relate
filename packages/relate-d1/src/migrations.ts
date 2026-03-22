@@ -4,7 +4,7 @@ import type { SchemaInput, ObjectSchema, AttributeSchema, Migration } from '@nok
 // ─── Shared tables ────────────────────────────────────────────────────────────
 
 const BASE_DDL = [
-  `CREATE TABLE IF NOT EXISTS crm_relationships (
+  `CREATE TABLE IF NOT EXISTS relate_relationships (
     id TEXT PRIMARY KEY,
     from_record_id TEXT NOT NULL,
     from_object TEXT NOT NULL,
@@ -15,10 +15,10 @@ const BASE_DDL = [
     created_at INTEGER NOT NULL
   )`,
 
-  `CREATE INDEX IF NOT EXISTS idx_rel_from ON crm_relationships(from_record_id, from_object)`,
-  `CREATE INDEX IF NOT EXISTS idx_rel_to ON crm_relationships(to_record_id, to_object)`,
+  `CREATE INDEX IF NOT EXISTS idx_rel_from ON relate_relationships(from_record_id, from_object)`,
+  `CREATE INDEX IF NOT EXISTS idx_rel_to ON relate_relationships(to_record_id, to_object)`,
 
-  `CREATE TABLE IF NOT EXISTS crm_activities (
+  `CREATE TABLE IF NOT EXISTS relate_activities (
     id TEXT PRIMARY KEY,
     record_id TEXT NOT NULL,
     object_slug TEXT NOT NULL,
@@ -28,9 +28,9 @@ const BASE_DDL = [
     created_at INTEGER NOT NULL
   )`,
 
-  `CREATE INDEX IF NOT EXISTS idx_activities_record ON crm_activities(record_id, occurred_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_activities_record ON relate_activities(record_id, occurred_at)`,
 
-  `CREATE TABLE IF NOT EXISTS crm_lists (
+  `CREATE TABLE IF NOT EXISTS relate_lists (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     object_slug TEXT NOT NULL,
@@ -40,18 +40,18 @@ const BASE_DDL = [
     updated_at INTEGER NOT NULL
   )`,
 
-  `CREATE INDEX IF NOT EXISTS idx_lists_object ON crm_lists(object_slug)`,
+  `CREATE INDEX IF NOT EXISTS idx_lists_object ON relate_lists(object_slug)`,
 
-  `CREATE TABLE IF NOT EXISTS crm_list_items (
+  `CREATE TABLE IF NOT EXISTS relate_list_items (
     list_id TEXT NOT NULL,
     record_id TEXT NOT NULL,
     added_at INTEGER NOT NULL,
     PRIMARY KEY (list_id, record_id)
   )`,
 
-  `CREATE INDEX IF NOT EXISTS idx_list_members_list ON crm_list_items(list_id, added_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_list_members_list ON relate_list_items(list_id, added_at)`,
 
-  `CREATE TABLE IF NOT EXISTS crm_migrations (
+  `CREATE TABLE IF NOT EXISTS relate_migrations (
     id TEXT PRIMARY KEY,
     applied_at INTEGER NOT NULL
   )`,
@@ -63,7 +63,7 @@ export function tableName(slug: string): string {
   if (!/^[a-z][a-z0-9_]*$/.test(slug)) {
     throw new Error(`Invalid object slug: "${slug}". Must be lowercase letters, numbers, underscores.`)
   }
-  return `crm_${slug}`
+  return `relate_${slug}`
 }
 
 export function attrToSqlType(schema: AttributeSchema): string {
@@ -145,11 +145,11 @@ export async function applyMigrations(db: D1Database, migrations: Migration[]): 
 
   // Ensure tracking table exists (safe to call without migrate() first)
   await db.prepare(
-    `CREATE TABLE IF NOT EXISTS crm_migrations (id TEXT PRIMARY KEY, applied_at INTEGER NOT NULL)`
+    `CREATE TABLE IF NOT EXISTS relate_migrations (id TEXT PRIMARY KEY, applied_at INTEGER NOT NULL)`
   ).run()
 
   // Get already-applied migration IDs
-  const applied = await db.prepare('SELECT id FROM crm_migrations').all<{ id: string }>()
+  const applied = await db.prepare('SELECT id FROM relate_migrations').all<{ id: string }>()
   const appliedIds = new Set(applied.results.map((r) => r.id))
 
   for (const migration of migrations) {
@@ -157,7 +157,7 @@ export async function applyMigrations(db: D1Database, migrations: Migration[]): 
 
     await migration.up(db)
     await db
-      .prepare('INSERT INTO crm_migrations (id, applied_at) VALUES (?, ?)')
+      .prepare('INSERT INTO relate_migrations (id, applied_at) VALUES (?, ?)')
       .bind(migration.id, Date.now())
       .run()
   }
