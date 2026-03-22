@@ -1,6 +1,6 @@
 # relate
 
-Core CRM SDK. Define your schema in code, get typed clients for records, relationships, activities, lists, and events.
+Core SDK. Define your domain in TypeScript. Get typed records, relationships, activity tracking, dynamic lists, and a full REST API.
 
 ```bash
 npm install @nokto-labs/relate
@@ -9,7 +9,7 @@ npm install @nokto-labs/relate
 ## Schema
 
 ```typescript
-import { createCRM, defineSchema } from '@nokto-labs/relate'
+import { relate, defineSchema } from '@nokto-labs/relate'
 
 const schema = defineSchema({
   objects: {
@@ -56,7 +56,7 @@ Options per object:
 ## Records
 
 ```typescript
-const crm = createCRM({ adapter, schema })
+const crm = relate({ adapter, schema })
 
 const alice = await crm.person.create({ email: 'alice@acme.com', name: 'Alice', tier: 'vip' })
 const acme = await crm.company.upsert({ domain: 'acme.com', name: 'Acme Inc', size: 50 })
@@ -182,7 +182,7 @@ events.on('person.deleted', ({ id }) => {
   console.log(`Person ${id} deleted`)
 })
 
-const crm = createCRM({ adapter, schema, events })
+const crm = relate({ adapter, schema, events })
 ```
 
 - Handlers can be sync or async

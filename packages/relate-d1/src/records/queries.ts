@@ -1,4 +1,4 @@
-import type { CRMRecord, ObjectSchema, FindRecordsOptions, PaginatedResult } from '@nokto-labs/relate'
+import type { RelateRecord, ObjectSchema, FindRecordsOptions, PaginatedResult } from '@nokto-labs/relate'
 import type { D1Database } from '../d1-types'
 import { tableName } from '../migrations'
 import { rowToRecord, assertSafeKey } from '../utils'
@@ -10,7 +10,7 @@ export async function findRecords(
   objectSlug: string,
   objectSchema: ObjectSchema,
   options?: FindRecordsOptions,
-): Promise<CRMRecord[]> {
+): Promise<RelateRecord[]> {
   const table = tableName(objectSlug)
   const clauses: string[] = []
   const bindings: unknown[] = []

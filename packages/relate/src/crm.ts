@@ -17,7 +17,7 @@ type EventPayloadFor<_T extends SchemaInput, E extends string> =
   : E extends `${infer _Obj}.deleted` ? DeletedEvent
   : never
 
-export type CRM<T extends SchemaInput> = {
+export type Relate<T extends SchemaInput> = {
   migrate(): Promise<void>
   applyMigrations(migrations: Migration[]): Promise<void>
   relationships: RelationshipsClient<T>
@@ -27,27 +27,27 @@ export type CRM<T extends SchemaInput> = {
   off<E extends EventName<T>>(event: E, handler: EventHandler<EventPayloadFor<T, E>>): void
 } & { [K in Exclude<keyof T, ReservedKeys>]: ObjectClient<Extract<T[K], ObjectSchema>> }
 
-export function createCRM<T extends SchemaDefinition>(config: {
+export function relate<T extends SchemaDefinition>(config: {
   adapter: StorageAdapter
   schema: T
   events?: EventBus
-}): CRM<T['objects']> {
+}): Relate<T['objects']> {
   const { adapter, schema } = config
   const objects = schema.objects
 
   adapter.setSchema?.(objects)
 
   const events = config.events ?? new EventBus()
-  let crmInstance: CRM<T['objects']>
+  let instance: Relate<T['objects']>
 
   const objectClients = Object.fromEntries(
     Object.entries(objects).map(([slug, objectSchema]) => [
       slug,
-      new ObjectClient(adapter, slug, objectSchema, events, () => crmInstance),
+      new ObjectClient(adapter, slug, objectSchema, events, () => instance),
     ]),
   ) as Record<string, ObjectClient<ObjectSchema>>
 
-  crmInstance = {
+  instance = {
     migrate: () => adapter.migrate(objects),
     applyMigrations: (migrations: Migration[]) => {
       if (!adapter.applyMigrations) {
@@ -61,7 +61,7 @@ export function createCRM<T extends SchemaDefinition>(config: {
     on: (event: string, handler: EventHandler<any>) => events.on(event, handler),
     off: (event: string, handler: EventHandler<any>) => events.off(event, handler),
     ...objectClients,
-  } as CRM<T['objects']>
+  } as Relate<T['objects']>
 
-  return crmInstance
+  return instance
 }

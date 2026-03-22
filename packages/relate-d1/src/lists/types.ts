@@ -1,4 +1,4 @@
-import type { CRMList } from '@nokto-labs/relate'
+import type { RelateList } from '@nokto-labs/relate'
 
 export interface ListRow {
   id: string
@@ -10,7 +10,7 @@ export interface ListRow {
   updated_at: number
 }
 
-export function rowToList(row: ListRow): CRMList {
+export function rowToList(row: ListRow): RelateList {
   return {
     id: row.id,
     name: row.name,

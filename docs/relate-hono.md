@@ -1,6 +1,6 @@
 # relate-hono
 
-Hono REST API routes for Relate. One function gives you a full CRM API.
+Hono REST API routes for Relate. One function gives you a full REST API.
 
 ```bash
 npm install @nokto-labs/relate @nokto-labs/relate-d1 @nokto-labs/relate-hono
@@ -10,7 +10,7 @@ npm install @nokto-labs/relate @nokto-labs/relate-d1 @nokto-labs/relate-hono
 
 ```typescript
 import { Hono } from 'hono'
-import { createCRM } from '@nokto-labs/relate'
+import { relate } from '@nokto-labs/relate'
 import { D1Adapter } from '@nokto-labs/relate-d1'
 import { relateRoutes } from '@nokto-labs/relate-hono'
 import { schema } from './schema'
@@ -21,7 +21,7 @@ const app = new Hono<{ Bindings: Env }>()
 
 app.route('/', relateRoutes({
   schema,
-  crm: (c: { env: Env }) => createCRM({ adapter: new D1Adapter(c.env.DB), schema }),
+  crm: (c: { env: Env }) => relate({ adapter: new D1Adapter(c.env.DB), schema }),
 }))
 
 export default app
@@ -105,7 +105,7 @@ Returns `{ records: [...], nextCursor: "..." }`.
 app.route('/', relateRoutes({
   // Required
   schema,
-  crm: (c: { env: Env }) => createCRM({ adapter: new D1Adapter(c.env.DB), schema }),
+  crm: (c: { env: Env }) => relate({ adapter: new D1Adapter(c.env.DB), schema }),
 
   // Optional
   events,                          // shared EventBus for hooks
@@ -136,7 +136,7 @@ const auth: MiddlewareHandler = async (c, next) => {
 
 app.route('/', relateRoutes({
   schema,
-  crm: (c: { env: Env }) => createCRM({ adapter: new D1Adapter(c.env.DB), schema }),
+  crm: (c: { env: Env }) => relate({ adapter: new D1Adapter(c.env.DB), schema }),
   middleware: auth,
 }))
 ```

@@ -1,5 +1,5 @@
 import { Miniflare } from 'miniflare'
-import { createCRM, defineSchema, EventBus } from '@nokto-labs/relate'
+import { relate, defineSchema, EventBus } from '@nokto-labs/relate'
 import { D1Adapter } from '../../relate-d1/src'
 import type { D1Database } from '../../relate-d1/src'
 import { relateRoutes } from '../src'
@@ -61,7 +61,7 @@ export async function createTestApp(overrides?: Record<string, unknown>) {
 
   const app = relateRoutes({
     schema: testSchema,
-    crm: () => createCRM({ adapter: new D1Adapter(d1), schema: testSchema, events }),
+    crm: () => relate({ adapter: new D1Adapter(d1), schema: testSchema, events }),
     events,
     ...overrides,
   } as any)

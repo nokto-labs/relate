@@ -1,5 +1,5 @@
 import { Miniflare } from 'miniflare'
-import { createCRM, defineSchema, EventBus } from '@nokto-labs/relate'
+import { relate, defineSchema, EventBus } from '@nokto-labs/relate'
 import { D1Adapter } from '../src'
 import type { D1Database } from '../src'
 
@@ -69,7 +69,7 @@ export async function createD1TestCRM() {
   const d1 = await getDB()
   const adapter = new D1Adapter(d1)
   const events = new EventBus()
-  const crm = createCRM({ adapter, schema: testSchema, events })
+  const crm = relate({ adapter, schema: testSchema, events })
   await crm.migrate()
   return { crm, db: d1, adapter, events }
 }

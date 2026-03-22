@@ -1,13 +1,13 @@
 import { Hono } from 'hono'
 import type { ObjectSchema, SchemaInput } from '@nokto-labs/relate'
-import type { HonoEnv, AnyCRM, AnyObjectClient } from '../types'
+import type { HonoEnv, AnyRelate, AnyObjectClient } from '../types'
 import { parseFilters } from '../filters'
 import { capLimit } from '../limits'
 
 export function recordRoutes(objects: SchemaInput, pluralToSlug: Record<string, string>) {
   const app = new Hono<HonoEnv>()
 
-  function resolveResource(crm: AnyCRM, plural: string): { client: AnyObjectClient; objectSchema: ObjectSchema } | null {
+  function resolveResource(crm: AnyRelate, plural: string): { client: AnyObjectClient; objectSchema: ObjectSchema } | null {
     const slug = pluralToSlug[plural]
     if (!slug) return null
     const client = (crm as unknown as Record<string, AnyObjectClient>)[slug]

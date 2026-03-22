@@ -7,11 +7,11 @@ npm install @nokto-labs/relate @nokto-labs/relate-d1
 ```
 
 ```typescript
-import { createCRM } from '@nokto-labs/relate'
+import { relate } from '@nokto-labs/relate'
 import { D1Adapter } from '@nokto-labs/relate-d1'
 import { schema } from './schema'
 
-const crm = createCRM({
+const crm = relate({
   adapter: new D1Adapter(env.DB),
   schema,
 })
@@ -32,7 +32,7 @@ await crm.applyMigrations([
 
 ## Docs
 
-[Full documentation on GitHub](https://github.com/nokto-labs/crm)
+[Full documentation on GitHub](https://github.com/nokto-labs/relate)
 
 ## License
 

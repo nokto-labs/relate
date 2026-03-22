@@ -1,7 +1,7 @@
 {
   "name": "@nokto-labs/relate",
-  "version": "0.1.0",
-  "description": "A CRM SDK for developers. Define your schema in code, get typed clients instantly.",
+  "version": "0.2.0",
+  "description": "Define your domain in TypeScript. Get typed records, relationships, activity tracking, dynamic lists, and a full REST API.",
   "type": "module",
   "license": "MIT",
   "publishConfig": {
@@ -9,12 +9,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/nokto-labs/crm",
+    "url": "https://github.com/nokto-labs/relate",
     "directory": "packages/relate"
   },
-  "homepage": "https://github.com/nokto-labs/crm#readme",
-  "bugs": "https://github.com/nokto-labs/crm/issues",
-  "keywords": ["crm", "sdk", "typescript", "schema", "api", "relationships", "events"],
+  "homepage": "https://github.com/nokto-labs/relate#readme",
+  "bugs": "https://github.com/nokto-labs/relate/issues",
+  "keywords": ["relate", "sdk", "typescript", "schema", "api", "relationships", "events", "domain-modeling", "cloudflare", "d1"],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

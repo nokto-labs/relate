@@ -1,4 +1,4 @@
-export type AnyCRM = {
+export type AnyRelate = {
   migrate(): Promise<void>
   relationships: { create(input: any): Promise<any>; list(ref?: any, options?: any): Promise<any[]>; update(id: string, attrs: any): Promise<any>; delete(id: string): Promise<void> }
   activities: { track(input: any): Promise<any>; list(ref?: any, options?: any): Promise<any[]> }
@@ -20,5 +20,5 @@ export type AnyObjectClient = {
 }
 
 export type HonoEnv = {
-  Variables: { crm: AnyCRM; maxLimit?: number }
+  Variables: { crm: AnyRelate; maxLimit?: number }
 }

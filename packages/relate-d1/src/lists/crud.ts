@@ -1,8 +1,8 @@
-import { type CRMList, type CreateListInput, type ListListsOptions, NotFoundError, ValidationError } from '@nokto-labs/relate'
+import { type RelateList, type CreateListInput, type ListListsOptions, NotFoundError, ValidationError } from '@nokto-labs/relate'
 import type { D1Database } from '../d1-types'
 import { type ListRow, rowToList } from './types'
 
-export async function getListOrThrow(db: D1Database, listId: string): Promise<CRMList> {
+export async function getListOrThrow(db: D1Database, listId: string): Promise<RelateList> {
   const list = await getList(db, listId)
   if (!list) throw new NotFoundError({ code: 'LIST_NOT_FOUND', id: listId }, `List "${listId}" not found`)
   return list
@@ -11,7 +11,7 @@ export async function getListOrThrow(db: D1Database, listId: string): Promise<CR
 export async function createList(
   db: D1Database,
   input: CreateListInput,
-): Promise<CRMList> {
+): Promise<RelateList> {
   const id = crypto.randomUUID()
   const now = Date.now()
 
@@ -37,7 +37,7 @@ export async function createList(
 export async function getList(
   db: D1Database,
   id: string,
-): Promise<CRMList | null> {
+): Promise<RelateList | null> {
   const row = await db
     .prepare('SELECT * FROM crm_lists WHERE id = ?')
     .bind(id)
@@ -48,7 +48,7 @@ export async function getList(
 export async function listLists(
   db: D1Database,
   options?: ListListsOptions,
-): Promise<CRMList[]> {
+): Promise<RelateList[]> {
   const clauses: string[] = []
   const bindings: unknown[] = []
 
@@ -81,7 +81,7 @@ export async function updateList(
   db: D1Database,
   id: string,
   attrs: { name?: string; filter?: Record<string, unknown> },
-): Promise<CRMList> {
+): Promise<RelateList> {
   const existing = await getListOrThrow(db, id)
 
   const sets: string[] = []

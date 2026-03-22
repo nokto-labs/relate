@@ -1,5 +1,5 @@
 import type { StorageAdapter, PaginatedResult } from '../adapter'
-import type { CRMRecord, ObjectSchema, InferAttributes, FilterOperator } from '../types'
+import type { RelateRecord, ObjectSchema, InferAttributes, FilterOperator } from '../types'
 import type { EventBus } from '../events'
 import { DuplicateError, ValidationError, NotFoundError } from '../errors'
 import { validateAttributes } from '../validation'
@@ -17,7 +17,7 @@ export class ObjectClient<S extends ObjectSchema> {
     private readonly crmRef?: () => unknown,
   ) {}
 
-  async create(attributes: InferAttributes<S>): Promise<CRMRecord<S>> {
+  async create(attributes: InferAttributes<S>): Promise<RelateRecord<S>> {
     validateAttributes(this.slug, this.schema, attributes as Record<string, unknown>)
 
     if (this.schema.uniqueBy) {
@@ -37,12 +37,12 @@ export class ObjectClient<S extends ObjectSchema> {
     const record = await this.adapter.createRecord(
       this.slug,
       attributes as Record<string, unknown>,
-    ) as CRMRecord<S>
+    ) as RelateRecord<S>
     await this.events?.emit(`${this.slug}.created`, { record, crm: this.crmRef?.() })
     return record
   }
 
-  async upsert(attributes: InferAttributes<S>): Promise<CRMRecord<S>> {
+  async upsert(attributes: InferAttributes<S>): Promise<RelateRecord<S>> {
     validateAttributes(this.slug, this.schema, attributes as Record<string, unknown>)
 
     if (!this.schema.uniqueBy) {
@@ -62,11 +62,11 @@ export class ObjectClient<S extends ObjectSchema> {
       ? { record, crm: this.crmRef?.() }
       : { record, changes: attributes as Record<string, unknown>, crm: this.crmRef?.() }
     await this.events?.emit(`${this.slug}.${event}`, payload)
-    return record as CRMRecord<S>
+    return record as RelateRecord<S>
   }
 
-  async get(id: string): Promise<CRMRecord<S> | null> {
-    return this.adapter.getRecord(this.slug, id) as Promise<CRMRecord<S> | null>
+  async get(id: string): Promise<RelateRecord<S> | null> {
+    return this.adapter.getRecord(this.slug, id) as Promise<RelateRecord<S> | null>
   }
 
   async find(options?: {
@@ -75,14 +75,14 @@ export class ObjectClient<S extends ObjectSchema> {
     offset?: number
     orderBy?: string
     order?: 'asc' | 'desc'
-  }): Promise<CRMRecord<S>[]> {
+  }): Promise<RelateRecord<S>[]> {
     return this.adapter.findRecords(this.slug, {
       filter: options?.filter as Record<string, unknown> | undefined,
       limit: options?.limit,
       offset: options?.offset,
       orderBy: options?.orderBy,
       order: options?.order,
-    }) as Promise<CRMRecord<S>[]>
+    }) as Promise<RelateRecord<S>[]>
   }
 
   async findPage(options?: {
@@ -91,7 +91,7 @@ export class ObjectClient<S extends ObjectSchema> {
     orderBy?: string
     order?: 'asc' | 'desc'
     cursor?: string
-  }): Promise<PaginatedResult<CRMRecord<S>>> {
+  }): Promise<PaginatedResult<RelateRecord<S>>> {
     if (!this.adapter.findRecordsPage) {
       const records = await this.find(options)
       return { records }
@@ -102,21 +102,21 @@ export class ObjectClient<S extends ObjectSchema> {
       orderBy: options?.orderBy,
       order: options?.order,
       cursor: options?.cursor,
-    }) as Promise<PaginatedResult<CRMRecord<S>>>
+    }) as Promise<PaginatedResult<RelateRecord<S>>>
   }
 
   async count(filter?: FilterInput<S>): Promise<number> {
     return this.adapter.countRecords(this.slug, filter as Record<string, unknown> | undefined)
   }
 
-  async update(id: string, attributes: Partial<InferAttributes<S>>): Promise<CRMRecord<S>> {
+  async update(id: string, attributes: Partial<InferAttributes<S>>): Promise<RelateRecord<S>> {
     validateAttributes(this.slug, this.schema, attributes as Record<string, unknown>, { partial: true })
 
     const record = await this.adapter.updateRecord(
       this.slug,
       id,
       attributes as Record<string, unknown>,
-    ) as CRMRecord<S>
+    ) as RelateRecord<S>
     await this.events?.emit(`${this.slug}.updated`, {
       record,
       changes: attributes as Record<string, unknown>,

@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { type SchemaDefinition, type EventBus, RelateError } from '@nokto-labs/relate'
-import type { AnyCRM, HonoEnv } from './types'
+import type { AnyRelate, HonoEnv } from './types'
 import { migrateRoutes } from './routes/migrate'
 import { relationshipRoutes } from './routes/relationships'
 import { activityRoutes } from './routes/activities'
@@ -8,7 +8,7 @@ import { listRoutes } from './routes/lists'
 import { recordRoutes } from './routes/records'
 import { schemaRoutes } from './routes/schema'
 
-export type { AnyCRM } from './types'
+export type { AnyRelate } from './types'
 
 type MiddlewareFn = (c: any, next: () => Promise<void>) => Promise<void | Response>
 
@@ -23,7 +23,7 @@ export interface RouteToggles {
 
 export interface RelateRoutesConfig<E extends object> {
   schema: SchemaDefinition
-  crm: (c: { env: E }) => AnyCRM
+  crm: (c: { env: E }) => AnyRelate
   events?: EventBus
   prefix?: string
   middleware?: MiddlewareFn | MiddlewareFn[]
@@ -32,7 +32,7 @@ export interface RelateRoutesConfig<E extends object> {
 }
 
 /**
- * Create a Hono app with all Relate CRM routes.
+ * Create a Hono app with all Relate routes.
  *
  * @example
  * ```ts
@@ -45,7 +45,7 @@ export interface RelateRoutesConfig<E extends object> {
  * app.route('/', relateRoutes({
  *   schema,
  *   events,
- *   crm: (c) => createCRM({ adapter: new D1Adapter(c.env.DB), schema, events }),
+ *   crm: (c) => relate({ adapter: new D1Adapter(c.env.DB), schema, events }),
  * }))
  * ```
  */
@@ -80,7 +80,7 @@ export function relateRoutes<E extends object = Record<string, unknown>>(
     }
   }
 
-  // CRM per request
+  // Relate instance per request
   app.use('*', async (c, next) => {
     c.set('crm', getCRM(c))
     if (maxLimit) c.set('maxLimit', maxLimit)

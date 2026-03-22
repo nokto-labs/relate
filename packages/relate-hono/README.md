@@ -1,6 +1,6 @@
 # @nokto-labs/relate-hono
 
-Hono REST API routes for [@nokto-labs/relate](https://www.npmjs.com/package/@nokto-labs/relate). One function gives you a full CRM API.
+Hono REST API routes for [@nokto-labs/relate](https://www.npmjs.com/package/@nokto-labs/relate). One function gives you a full REST API.
 
 ```bash
 npm install @nokto-labs/relate @nokto-labs/relate-d1 @nokto-labs/relate-hono
@@ -8,7 +8,7 @@ npm install @nokto-labs/relate @nokto-labs/relate-d1 @nokto-labs/relate-hono
 
 ```typescript
 import { Hono } from 'hono'
-import { createCRM, EventBus } from '@nokto-labs/relate'
+import { relate, EventBus } from '@nokto-labs/relate'
 import { D1Adapter } from '@nokto-labs/relate-d1'
 import { relateRoutes } from '@nokto-labs/relate-hono'
 import { schema } from './schema'
@@ -21,7 +21,7 @@ const app = new Hono()
 app.route('/', relateRoutes({
   schema,
   events,
-  crm: (c) => createCRM({ adapter: new D1Adapter(c.env.DB), schema, events }),
+  crm: (c) => relate({ adapter: new D1Adapter(c.env.DB), schema, events }),
 }))
 
 export default app
@@ -32,7 +32,7 @@ export default app
 ```typescript
 relateRoutes({
   schema,
-  crm: (c) => createCRM({ ... }),
+  crm: (c) => relate({ ... }),
   events,                         // shared EventBus
   prefix: '/api/v1',              // prefix all routes
   middleware: [auth],             // run before every route
@@ -43,7 +43,7 @@ relateRoutes({
 
 ## Docs
 
-[Full documentation on GitHub](https://github.com/nokto-labs/crm)
+[Full documentation on GitHub](https://github.com/nokto-labs/relate)
 
 ## License
 

@@ -1,4 +1,4 @@
-import type { CRMRecord, CRMList, Relationship, Activity, SchemaInput, ObjectRef } from './types'
+import type { RelateRecord, RelateList, Relationship, Activity, SchemaInput, ObjectRef } from './types'
 
 // ─── Find options ────────────────────────────────────────────────────────────
 
@@ -11,12 +11,12 @@ export interface FindRecordsOptions {
   cursor?: string
 }
 
-export interface PaginatedResult<T = CRMRecord> {
+export interface PaginatedResult<T = RelateRecord> {
   records: T[]
   nextCursor?: string
 }
 
-export interface UpsertResult<T = CRMRecord> {
+export interface UpsertResult<T = RelateRecord> {
   record: T
   isNew: boolean
 }
@@ -91,7 +91,7 @@ export interface Migration {
  * The D1 adapter (`relate/d1`) implements this for Cloudflare D1.
  */
 export interface StorageAdapter {
-  /** Called by createCRM immediately — seeds the schema so record operations work before migrate() */
+  /** Called by relate() immediately — seeds the schema so record operations work before migrate() */
   setSchema?(schema: SchemaInput): void
   /** Create tables and sync the object schema registry */
   migrate(schema: SchemaInput): Promise<void>
@@ -99,13 +99,13 @@ export interface StorageAdapter {
   applyMigrations?(migrations: Migration[]): Promise<void>
 
   // Records
-  createRecord(objectSlug: string, attributes: Record<string, unknown>): Promise<CRMRecord>
+  createRecord(objectSlug: string, attributes: Record<string, unknown>): Promise<RelateRecord>
   upsertRecord(objectSlug: string, uniqueBy: string, attributes: Record<string, unknown>): Promise<UpsertResult>
-  getRecord(objectSlug: string, id: string): Promise<CRMRecord | null>
-  findRecords(objectSlug: string, options?: FindRecordsOptions): Promise<CRMRecord[]>
+  getRecord(objectSlug: string, id: string): Promise<RelateRecord | null>
+  findRecords(objectSlug: string, options?: FindRecordsOptions): Promise<RelateRecord[]>
   findRecordsPage?(objectSlug: string, options?: FindRecordsOptions): Promise<PaginatedResult>
   countRecords(objectSlug: string, filter?: Record<string, unknown>): Promise<number>
-  updateRecord(objectSlug: string, id: string, attributes: Record<string, unknown>): Promise<CRMRecord>
+  updateRecord(objectSlug: string, id: string, attributes: Record<string, unknown>): Promise<RelateRecord>
   deleteRecord(objectSlug: string, id: string): Promise<void>
   /** Clean up relationships and list memberships for a deleted record */
   cleanupRecordRefs?(objectSlug: string, id: string): Promise<void>
@@ -121,10 +121,10 @@ export interface StorageAdapter {
   listActivities(ref?: { object: string; id: string }, options?: ListActivitiesOptions): Promise<Activity[]>
 
   // Lists
-  createList(input: CreateListInput): Promise<CRMList>
-  getList(id: string): Promise<CRMList | null>
-  listLists(options?: ListListsOptions): Promise<CRMList[]>
-  updateList(id: string, attrs: { name?: string; filter?: Record<string, unknown> }): Promise<CRMList>
+  createList(input: CreateListInput): Promise<RelateList>
+  getList(id: string): Promise<RelateList | null>
+  listLists(options?: ListListsOptions): Promise<RelateList[]>
+  updateList(id: string, attrs: { name?: string; filter?: Record<string, unknown> }): Promise<RelateList>
   deleteList(id: string): Promise<void>
   addToList(listId: string, recordIds: string[]): Promise<void>
   removeFromList(listId: string, recordIds: string[]): Promise<void>

@@ -1,10 +1,10 @@
-export { createCRM } from './crm'
+export { relate } from './crm'
 export { defineSchema } from './schema'
 export { EventBus } from './events'
 export { RelateError, NotFoundError, DuplicateError, ValidationError } from './errors'
 export type { ErrorCode, ErrorDetail } from './errors'
 
-export type { CRM } from './crm'
+export type { Relate } from './crm'
 export type {
   StorageAdapter,
   CreateRelationshipInput,
@@ -20,8 +20,8 @@ export type {
   ListItemsOptions,
 } from './adapter'
 export type {
-  CRMRecord,
-  CRMList,
+  RelateRecord,
+  RelateList,
   Relationship,
   Activity,
   SchemaInput,

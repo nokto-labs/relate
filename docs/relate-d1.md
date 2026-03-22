@@ -9,7 +9,7 @@ npm install @nokto-labs/relate @nokto-labs/relate-d1
 ## Setup
 
 ```typescript
-import { createCRM, defineSchema } from '@nokto-labs/relate'
+import { relate, defineSchema } from '@nokto-labs/relate'
 import { D1Adapter } from '@nokto-labs/relate-d1'
 
 const schema = defineSchema({
@@ -24,7 +24,7 @@ const schema = defineSchema({
   },
 })
 
-const crm = createCRM({
+const crm = relate({
   adapter: new D1Adapter(db), // pass your D1 binding
   schema,
 })
@@ -40,7 +40,7 @@ await crm.migrate()
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "my-crm",
+      "database_name": "my-app",
       "database_id": "your-database-id"
     }
   ]
@@ -104,7 +104,7 @@ Migrations are idempotent — re-running skips already-applied migrations.
 
 ```typescript
 import { Hono } from 'hono'
-import { createCRM } from '@nokto-labs/relate'
+import { relate } from '@nokto-labs/relate'
 import { D1Adapter } from '@nokto-labs/relate-d1'
 import { relateRoutes } from '@nokto-labs/relate-hono'
 import { schema } from './schema'
@@ -115,7 +115,7 @@ const app = new Hono<{ Bindings: Env }>()
 
 app.route('/', relateRoutes({
   schema,
-  crm: (c: { env: Env }) => createCRM({ adapter: new D1Adapter(c.env.DB), schema }),
+  crm: (c: { env: Env }) => relate({ adapter: new D1Adapter(c.env.DB), schema }),
 }))
 
 export default app

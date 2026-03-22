@@ -1,4 +1,4 @@
-import type { StorageAdapter, CreateRelationshipInput, TrackActivityInput, FindRecordsOptions, ListActivitiesOptions, ListRelationshipsOptions, PaginatedResult, UpsertResult, Migration, CreateListInput, ListListsOptions, ListItemsOptions, CRMRecord, CRMList, Relationship, Activity, SchemaInput, ObjectSchema } from '@nokto-labs/relate'
+import type { StorageAdapter, CreateRelationshipInput, TrackActivityInput, FindRecordsOptions, ListActivitiesOptions, ListRelationshipsOptions, PaginatedResult, UpsertResult, Migration, CreateListInput, ListListsOptions, ListItemsOptions, RelateRecord, RelateList, Relationship, Activity, SchemaInput, ObjectSchema } from '@nokto-labs/relate'
 import type { D1Database } from './d1-types'
 import { migrate, applyMigrations } from './migrations'
 import { createRecord, upsertRecord, getRecord, updateRecord, deleteRecord } from './records/crud'
@@ -29,11 +29,11 @@ export class D1Adapter implements StorageAdapter {
 
   private objectSchema(objectSlug: string): ObjectSchema {
     const s = this.schema[objectSlug]
-    if (!s || !('attributes' in s)) throw new Error(`Unknown object: "${objectSlug}". Did you call crm.migrate()?`)
+    if (!s || !('attributes' in s)) throw new Error(`Unknown object: "${objectSlug}". Did you call db.migrate()?`)
     return s as ObjectSchema
   }
 
-  createRecord(objectSlug: string, attrs: Record<string, unknown>): Promise<CRMRecord> {
+  createRecord(objectSlug: string, attrs: Record<string, unknown>): Promise<RelateRecord> {
     return createRecord(this.db, objectSlug, this.objectSchema(objectSlug), attrs)
   }
 
@@ -41,11 +41,11 @@ export class D1Adapter implements StorageAdapter {
     return upsertRecord(this.db, objectSlug, this.objectSchema(objectSlug), uniqueBy, attrs)
   }
 
-  getRecord(objectSlug: string, id: string): Promise<CRMRecord | null> {
+  getRecord(objectSlug: string, id: string): Promise<RelateRecord | null> {
     return getRecord(this.db, objectSlug, this.objectSchema(objectSlug), id)
   }
 
-  findRecords(objectSlug: string, options?: FindRecordsOptions): Promise<CRMRecord[]> {
+  findRecords(objectSlug: string, options?: FindRecordsOptions): Promise<RelateRecord[]> {
     return findRecords(this.db, objectSlug, this.objectSchema(objectSlug), options)
   }
 
@@ -57,7 +57,7 @@ export class D1Adapter implements StorageAdapter {
     return countRecords(this.db, objectSlug, this.objectSchema(objectSlug), filter)
   }
 
-  updateRecord(objectSlug: string, id: string, attrs: Record<string, unknown>): Promise<CRMRecord> {
+  updateRecord(objectSlug: string, id: string, attrs: Record<string, unknown>): Promise<RelateRecord> {
     return updateRecord(this.db, objectSlug, this.objectSchema(objectSlug), id, attrs)
   }
 
@@ -93,19 +93,19 @@ export class D1Adapter implements StorageAdapter {
     return activities.listActivities(this.db, ref, options)
   }
 
-  createList(input: CreateListInput): Promise<CRMList> {
+  createList(input: CreateListInput): Promise<RelateList> {
     return createList(this.db, input)
   }
 
-  getList(id: string): Promise<CRMList | null> {
+  getList(id: string): Promise<RelateList | null> {
     return getList(this.db, id)
   }
 
-  listLists(options?: ListListsOptions): Promise<CRMList[]> {
+  listLists(options?: ListListsOptions): Promise<RelateList[]> {
     return listLists(this.db, options)
   }
 
-  updateList(id: string, attrs: { name?: string; filter?: Record<string, unknown> }): Promise<CRMList> {
+  updateList(id: string, attrs: { name?: string; filter?: Record<string, unknown> }): Promise<RelateList> {
     return updateList(this.db, id, attrs)
   }
 

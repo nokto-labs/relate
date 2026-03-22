@@ -1,7 +1,7 @@
 import type { SchemaDefinition } from './types'
 
 /**
- * Define your CRM schema. Pass this to `createCRM` to get fully typed object clients.
+ * Define your schema. Pass this to `relate()` to get fully typed object clients.
  *
  * @example
  * const schema = defineSchema({

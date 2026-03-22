@@ -1,4 +1,4 @@
-import type { CRMRecord, ObjectSchema, AttributeSchema } from '@nokto-labs/relate'
+import type { RelateRecord, ObjectSchema, AttributeSchema } from '@nokto-labs/relate'
 import { ValidationError } from '@nokto-labs/relate'
 
 function attributeType(schema: AttributeSchema): string {
@@ -77,7 +77,7 @@ export function sqlToValue(schema: AttributeSchema, value: unknown): unknown {
 export function rowToRecord(
   objectSchema: ObjectSchema,
   row: Record<string, unknown>,
-): CRMRecord {
+): RelateRecord {
   const record: Record<string, unknown> = {
     id: row['id'],
     createdAt: new Date(row['created_at'] as number),
@@ -87,7 +87,7 @@ export function rowToRecord(
     const val = sqlToValue(attrSchema, row[key])
     if (val !== undefined) record[key] = val
   }
-  return record as CRMRecord
+  return record as RelateRecord
 }
 
 export function assertSafeKey(key: string): void {

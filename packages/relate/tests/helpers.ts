@@ -1,5 +1,5 @@
-import { createCRM, defineSchema, EventBus } from '../src'
-import type { StorageAdapter, UpsertResult, CRMRecord, SchemaDefinition } from '../src'
+import { relate, defineSchema, EventBus } from '../src'
+import type { StorageAdapter, UpsertResult, RelateRecord, SchemaDefinition } from '../src'
 
 // ─── In-memory storage for tests ─────────────────────────────────────────────
 
@@ -20,7 +20,7 @@ export function createMockAdapter(): StorageAdapter & { records: Map<string, Map
     async createRecord(slug, attrs) {
       const id = crypto.randomUUID()
       const now = new Date()
-      const record = { id, ...attrs, createdAt: now, updatedAt: now } as CRMRecord
+      const record = { id, ...attrs, createdAt: now, updatedAt: now } as RelateRecord
       getTable(slug).set(id, record as Record<string, unknown>)
       return record
     },
@@ -31,7 +31,7 @@ export function createMockAdapter(): StorageAdapter & { records: Map<string, Map
         if (existing[uniqueBy] === attrs[uniqueBy]) {
           const merged = { ...existing, ...attrs, updatedAt: new Date() }
           table.set(id, merged)
-          return { record: merged as CRMRecord, isNew: false }
+          return { record: merged as RelateRecord, isNew: false }
         }
       }
       const record = await this.createRecord(slug, attrs)
@@ -39,7 +39,7 @@ export function createMockAdapter(): StorageAdapter & { records: Map<string, Map
     },
 
     async getRecord(slug, id) {
-      return (getTable(slug).get(id) as CRMRecord) ?? null
+      return (getTable(slug).get(id) as RelateRecord) ?? null
     },
 
     async findRecords(slug, options) {
@@ -53,7 +53,7 @@ export function createMockAdapter(): StorageAdapter & { records: Map<string, Map
       }
 
       if (options?.limit) results = results.slice(0, options.limit)
-      return results as CRMRecord[]
+      return results as RelateRecord[]
     },
 
     async countRecords(slug, filter) {
@@ -66,7 +66,7 @@ export function createMockAdapter(): StorageAdapter & { records: Map<string, Map
       if (!existing) throw new Error(`Not found: ${id}`)
       const merged = { ...existing, ...attrs, updatedAt: new Date() }
       table.set(id, merged)
-      return merged as CRMRecord
+      return merged as RelateRecord
     },
 
     async deleteRecord(slug, id) {
@@ -119,6 +119,6 @@ export const testSchema = defineSchema({
 export function createTestCRM(schema: SchemaDefinition = testSchema) {
   const adapter = createMockAdapter()
   const events = new EventBus()
-  const crm = createCRM({ adapter, schema, events })
+  const crm = relate({ adapter, schema, events })
   return { crm, adapter, events }
 }

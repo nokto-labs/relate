@@ -78,13 +78,13 @@ export function attrToSqlType(schema: AttributeSchema): string {
 
 // ─── Migration helpers (for use inside Migration.up) ─────────────────────────
 
-/** Rename a column on a CRM object table. Uses ALTER TABLE RENAME COLUMN (SQLite 3.25+). */
+/** Rename a column on an object table. Uses ALTER TABLE RENAME COLUMN (SQLite 3.25+). */
 export async function renameColumn(db: D1Database, objectSlug: string, oldName: string, newName: string): Promise<void> {
   const table = tableName(objectSlug)
   await db.prepare(`ALTER TABLE ${table} RENAME COLUMN ${oldName} TO ${newName}`).run()
 }
 
-/** Drop a column from a CRM object table. Uses ALTER TABLE DROP COLUMN (SQLite 3.35+). */
+/** Drop a column from an object table. Uses ALTER TABLE DROP COLUMN (SQLite 3.35+). */
 export async function dropColumn(db: D1Database, objectSlug: string, columnName: string): Promise<void> {
   const table = tableName(objectSlug)
   await db.prepare(`ALTER TABLE ${table} DROP COLUMN ${columnName}`).run()

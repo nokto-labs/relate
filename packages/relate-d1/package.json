@@ -1,7 +1,7 @@
 {
   "name": "@nokto-labs/relate-d1",
-  "version": "0.1.0",
-  "description": "Cloudflare D1 adapter for @nokto-labs/relate CRM SDK.",
+  "version": "0.2.0",
+  "description": "Cloudflare D1 storage adapter for @nokto-labs/relate.",
   "type": "module",
   "license": "MIT",
   "publishConfig": {
@@ -9,12 +9,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/nokto-labs/crm",
+    "url": "https://github.com/nokto-labs/relate",
     "directory": "packages/relate-d1"
   },
-  "homepage": "https://github.com/nokto-labs/crm#readme",
-  "bugs": "https://github.com/nokto-labs/crm/issues",
-  "keywords": ["crm", "sdk", "cloudflare", "d1", "adapter", "typescript"],
+  "homepage": "https://github.com/nokto-labs/relate#readme",
+  "bugs": "https://github.com/nokto-labs/relate/issues",
+  "keywords": ["relate", "sdk", "cloudflare", "d1", "adapter", "typescript", "domain-modeling"],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

@@ -1,13 +1,13 @@
 # @nokto-labs/relate
 
-A CRM SDK for developers. Define your schema in code, get typed clients instantly.
+Define your domain in TypeScript. Get typed records, relationships, activity tracking, dynamic lists, and a full REST API.
 
 ```bash
 npm install @nokto-labs/relate
 ```
 
 ```typescript
-import { createCRM, defineSchema, EventBus } from '@nokto-labs/relate'
+import { relate, defineSchema, EventBus } from '@nokto-labs/relate'
 
 const schema = defineSchema({
   objects: {
@@ -25,7 +25,7 @@ const schema = defineSchema({
   },
 })
 
-const crm = createCRM({ adapter, schema })
+const crm = relate({ adapter, schema })
 
 await crm.person.create({ email: 'alice@acme.com', name: 'Alice', tier: 'vip' })
 await crm.person.find({ filter: { tier: 'vip' } })
@@ -48,7 +48,7 @@ Records, relationships, activities, lists, filtering, cursor pagination, hooks, 
 
 ## Docs
 
-[Full documentation on GitHub](https://github.com/nokto-labs/crm)
+[Full documentation on GitHub](https://github.com/nokto-labs/relate)
 
 ## License
 

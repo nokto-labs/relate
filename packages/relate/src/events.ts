@@ -1,14 +1,14 @@
-import type { CRMRecord, ObjectSchema } from './types'
+import type { RelateRecord, ObjectSchema } from './types'
 
 // ─── Event types ─────────────────────────────────────────────────────────────
 
 export interface CreatedEvent<S extends ObjectSchema = ObjectSchema> {
-  record: CRMRecord<S>
+  record: RelateRecord<S>
   crm: unknown
 }
 
 export interface UpdatedEvent<S extends ObjectSchema = ObjectSchema> {
-  record: CRMRecord<S>
+  record: RelateRecord<S>
   changes: Partial<Record<string, unknown>>
   crm: unknown
 }

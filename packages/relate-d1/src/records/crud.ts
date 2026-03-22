@@ -1,4 +1,4 @@
-import { type CRMRecord, type ObjectSchema, type UpsertResult, NotFoundError, ValidationError } from '@nokto-labs/relate'
+import { type RelateRecord, type ObjectSchema, type UpsertResult, NotFoundError, ValidationError } from '@nokto-labs/relate'
 import type { D1Database } from '../d1-types'
 import { tableName } from '../migrations'
 import { valueToSql, rowToRecord, assertSafeKey } from '../utils'
@@ -8,7 +8,7 @@ export async function createRecord(
   objectSlug: string,
   objectSchema: ObjectSchema,
   attributes: Record<string, unknown>,
-): Promise<CRMRecord> {
+): Promise<RelateRecord> {
   const table = tableName(objectSlug)
   const id = crypto.randomUUID()
   const now = Date.now()
@@ -86,7 +86,7 @@ export async function getRecord(
   objectSlug: string,
   objectSchema: ObjectSchema,
   id: string,
-): Promise<CRMRecord | null> {
+): Promise<RelateRecord | null> {
   const table = tableName(objectSlug)
   const row = await db
     .prepare(`SELECT * FROM ${table} WHERE id = ?`)
@@ -101,7 +101,7 @@ export async function updateRecord(
   objectSchema: ObjectSchema,
   id: string,
   attributes: Record<string, unknown>,
-): Promise<CRMRecord> {
+): Promise<RelateRecord> {
   const table = tableName(objectSlug)
   const existing = await getRecord(db, objectSlug, objectSchema, id)
   if (!existing) throw new NotFoundError({ code: 'RECORD_NOT_FOUND', object: objectSlug, id }, `Record "${id}" not found in "${objectSlug}"`)
@@ -112,7 +112,7 @@ export async function updateRecord(
   if (attrEntries.length === 0) {
     // Nothing to update, just bump updatedAt
     await db.prepare(`UPDATE ${table} SET updated_at = ? WHERE id = ?`).bind(now, id).run()
-    return { ...existing, updatedAt: new Date(now) } as CRMRecord
+    return { ...existing, updatedAt: new Date(now) } as RelateRecord
   }
 
   const setClauses = attrEntries.map(([k]) => `${k} = ?`).join(', ')
@@ -126,7 +126,7 @@ export async function updateRecord(
     .bind(...values, now, id)
     .run()
 
-  return { ...existing, ...attributes, updatedAt: new Date(now) } as CRMRecord
+  return { ...existing, ...attributes, updatedAt: new Date(now) } as RelateRecord
 }
 
 export async function deleteRecord(

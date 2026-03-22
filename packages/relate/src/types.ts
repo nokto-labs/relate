@@ -84,7 +84,7 @@ export type ObjectRef<S extends SchemaInput = SchemaInput> = {
   id: string
 }
 
-export type CRMRecord<S extends ObjectSchema = ObjectSchema> = {
+export type RelateRecord<S extends ObjectSchema = ObjectSchema> = {
   id: string
   createdAt: Date
   updatedAt: Date
@@ -107,7 +107,7 @@ export interface Activity<S extends SchemaInput = SchemaInput> {
   createdAt: Date
 }
 
-export interface CRMList<S extends SchemaInput = SchemaInput> {
+export interface RelateList<S extends SchemaInput = SchemaInput> {
   id: string
   name: string
   object: Extract<keyof S, string>

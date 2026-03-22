@@ -1,6 +1,6 @@
-# Example: Cloudflare Worker CRM
+# Example: Cloudflare Worker
 
-A complete CRM API running on Cloudflare Workers with D1. Three files.
+A complete REST API running on Cloudflare Workers with D1. Three files.
 
 ## schema.ts
 
@@ -57,7 +57,7 @@ export const schema = defineSchema({
 
 ```typescript
 import { Hono } from 'hono'
-import { createCRM, EventBus } from '@nokto-labs/relate'
+import { relate, EventBus } from '@nokto-labs/relate'
 import { D1Adapter } from '@nokto-labs/relate-d1'
 import { relateRoutes } from '@nokto-labs/relate-hono'
 import { schema } from './schema'
@@ -84,7 +84,7 @@ const app = new Hono<{ Bindings: Env }>()
 app.route('/', relateRoutes({
   schema,
   events,
-  crm: (c: { env: Env }) => createCRM({ adapter: new D1Adapter(c.env.DB), schema, events }),
+  crm: (c: { env: Env }) => relate({ adapter: new D1Adapter(c.env.DB), schema, events }),
 }))
 
 export default app
@@ -94,15 +94,15 @@ export default app
 
 ```jsonc
 {
-  "name": "my-crm",
+  "name": "my-app",
   "main": "src/index.ts",
   "compatibility_date": "2024-01-01",
   "compatibility_flags": ["nodejs_compat"],
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "crm",
-      // Run: wrangler d1 create crm — then paste the ID here
+      "database_name": "my-app",
+      // Run: wrangler d1 create my-app — then paste the ID here
       "database_id": ""
     }
   ]
@@ -165,6 +165,6 @@ GET /deals/count?stage=closed_won
 
 ```bash
 npm install @nokto-labs/relate @nokto-labs/relate-d1 @nokto-labs/relate-hono hono
-npx wrangler d1 create crm
+npx wrangler d1 create my-app
 npx wrangler dev
 ```
