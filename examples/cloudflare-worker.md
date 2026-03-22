@@ -1,12 +1,21 @@
 # Example: Cloudflare Worker
 
-This is a complete Relate setup for Cloudflare Workers with D1 and Hono.
+This example builds a small sales CRM for Cloudflare Workers with D1 and Hono.
+
+The CRM tracks:
+
+- `person` records for contacts
+- `company` records for accounts
+- `deal` records for opportunities
+- a `works_at` relationship between people and companies
+
+It shows how to define the model once, store it in D1, expose it as an HTTP API with Hono, and attach hooks for domain events.
 
 The example has three files:
 
-1. `schema.ts`
-2. `index.ts`
-3. `wrangler.jsonc`
+1. `schema.ts` defines the CRM objects, attributes, refs, and relationships
+2. `index.ts` creates the Relate instance, registers hooks, and mounts the API routes
+3. `wrangler.jsonc` configures the Worker runtime and D1 binding
 
 ## `schema.ts`
 

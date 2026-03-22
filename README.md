@@ -1,20 +1,27 @@
 # Relate
 
-Define your domain in TypeScript. Get a typed SDK, refs, relationships, activities, lists, hooks, and an optional REST API for Cloudflare.
+Define your domain in TypeScript. Get typed records, refs, relationships, activities, lists, hooks, and an optional REST API for Cloudflare.
 
-Relate is built around a simple idea:
+## What You Can Build
 
-1. Define your objects with `defineSchema()`
-2. Create a database client with `relate()`
+- A CRM for people, companies, deals, ownership, and activity history
+- An event system for guests, sessions, tickets, check-ins, and follow-up
+- An internal tool for vendors, inventory, orders, tasks, and saved views
+- A community or directory app with profiles, orgs, relationships, and dynamic lists
+
+Relate has three layers:
+
+1. Define your schema with `defineSchema()`
+2. Create a typed client with `relate()`
 3. Optionally expose the same model as HTTP routes with `relateRoutes()`
 
 ## Packages
 
-| Package | Purpose |
-|---------|---------|
-| [`@nokto-labs/relate`](packages/relate) | Core SDK: schema, records, refs, relationships, activities, lists, hooks, errors |
-| [`@nokto-labs/relate-d1`](packages/relate-d1) | Cloudflare D1 adapter |
-| [`@nokto-labs/relate-hono`](packages/relate-hono) | Hono route generator |
+| Package | Purpose | Docs |
+|---------|---------|------|
+| [`@nokto-labs/relate`](packages/relate) | Core SDK | [`packages/relate/README.md`](packages/relate/README.md) |
+| [`@nokto-labs/relate-d1`](packages/relate-d1) | Cloudflare D1 adapter | [`packages/relate-d1/README.md`](packages/relate-d1/README.md) |
+| [`@nokto-labs/relate-hono`](packages/relate-hono) | Hono route generator | [`packages/relate-hono/README.md`](packages/relate-hono/README.md) |
 
 ## Install
 
@@ -30,6 +37,10 @@ import { defineSchema, relate } from '@nokto-labs/relate'
 import { D1Adapter } from '@nokto-labs/relate-d1'
 import { relateRoutes } from '@nokto-labs/relate-hono'
 
+interface Env {
+  DB: D1Database
+}
+
 const schema = defineSchema({
   objects: {
     person: {
@@ -40,14 +51,6 @@ const schema = defineSchema({
       },
       uniqueBy: 'email',
     },
-    company: {
-      plural: 'companies',
-      attributes: {
-        domain: { type: 'text', required: true },
-        name: 'text',
-      },
-      uniqueBy: 'domain',
-    },
     deal: {
       plural: 'deals',
       attributes: {
@@ -56,25 +59,19 @@ const schema = defineSchema({
       },
     },
   },
-  relationships: {
-    works_at: { from: 'person', to: 'company' },
-  },
 })
 
-const db = relate({
-  adapter: new D1Adapter(env.DB),
-  schema,
-})
-
-await db.migrate()
-await db.person.create({ email: 'alice@acme.com', name: 'Alice' })
-
-const app = new Hono()
+const app = new Hono<{ Bindings: Env }>()
 
 app.route('/', relateRoutes({
   schema,
-  db: (c) => relate({ adapter: new D1Adapter(c.env.DB), schema }),
+  db: (c) => relate({
+    adapter: new D1Adapter(c.env.DB),
+    schema,
+  }),
 }))
+
+export default app
 ```
 
 ## What You Get
@@ -88,52 +85,18 @@ app.route('/', relateRoutes({
 - Schema-driven migrations for tables and columns
 - Generated Hono routes for CRUD, refs, relationships, activities, and lists
 
-## Mental Model
+## Where To Read
 
-Use **objects** for your main record types.
+- Core SDK and typed client reference: [`packages/relate/README.md`](packages/relate/README.md)
+- D1 setup and migration details: [`packages/relate-d1/README.md`](packages/relate-d1/README.md)
+- HTTP routes and query syntax: [`packages/relate-hono/README.md`](packages/relate-hono/README.md)
+- Cross-package examples: [`examples/README.md`](examples/README.md)
 
-Use **refs** when one record directly owns or points to another:
-- `deal.owner`
-- `checkin.event`
-- `task.project`
+## Examples
 
-Use **relationships** when records are connected but neither side owns the other:
-- `person works_at company`
-- `user watches issue`
-- `person mentors person`
-
-Use **activities** for an append-only timeline:
-- stage changes
-- emails sent
-- comments added
-- deployments triggered
-
-Use **lists** for saved views and manual collections:
-- "VIP customers"
-- "Open deals over 50k"
-- "Launch checklist"
-
-## Docs
-
-| Topic | Link |
-|-------|------|
-| Core SDK | [docs/relate.md](docs/relate.md) |
-| D1 adapter | [docs/relate-d1.md](docs/relate-d1.md) |
-| Hono routes | [docs/relate-hono.md](docs/relate-hono.md) |
-| Full Worker example | [docs/example.md](docs/example.md) |
-
-## Reference
-
-- Full typed client reference: [docs/relate.md](docs/relate.md)
-- SDK filter/operator reference: [docs/relate.md](docs/relate.md)
-- HTTP filter/query reference: [docs/relate-hono.md](docs/relate-hono.md)
-
-## Start Here
-
-- Read [docs/relate.md](docs/relate.md) if you want to model data and use the SDK directly.
-- Read [docs/relate-d1.md](docs/relate-d1.md) if you are wiring Relate to Cloudflare D1.
-- Read [docs/relate-hono.md](docs/relate-hono.md) if you want a REST API from your schema.
-- Read [docs/example.md](docs/example.md) if you want a complete Worker setup you can copy into a project.
+| Example | What it shows |
+|---------|---------------|
+| [`examples/cloudflare-worker.md`](examples/cloudflare-worker.md) | Full Cloudflare Worker with D1 and Hono |
 
 ## License
 
