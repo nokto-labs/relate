@@ -1,15 +1,19 @@
-# relate-d1
+# `@nokto-labs/relate-d1`
 
 Cloudflare D1 adapter for Relate.
+
+Use this package when you want to persist a Relate schema in D1 and run it inside Cloudflare Workers.
+
+## Install
 
 ```bash
 npm install @nokto-labs/relate @nokto-labs/relate-d1
 ```
 
-## Setup
+## Quick Start
 
 ```typescript
-import { relate, defineSchema } from '@nokto-labs/relate'
+import { defineSchema, relate } from '@nokto-labs/relate'
 import { D1Adapter } from '@nokto-labs/relate-d1'
 
 const schema = defineSchema({
@@ -25,17 +29,16 @@ const schema = defineSchema({
 })
 
 const db = relate({
-  adapter: new D1Adapter(db), // pass your D1 binding
+  adapter: new D1Adapter(env.DB),
   schema,
 })
 
 await db.migrate()
 ```
 
-## Wrangler config
+## Wrangler Binding
 
 ```jsonc
-// wrangler.jsonc
 {
   "d1_databases": [
     {
@@ -47,24 +50,50 @@ await db.migrate()
 }
 ```
 
-## Tables
+## What `migrate()` Creates
 
-`migrate()` creates these tables automatically:
+Relate creates one table per object plus a small set of shared tables.
 
 | Table | Purpose |
 |-------|---------|
-| `relate_{object}` | One per object (e.g. `relate_person`, `relate_company`) |
-| `relate_relationships` | Bidirectional relationships between records |
-| `relate_activities` | Immutable event log |
-| `relate_lists` | Static and dynamic list definitions |
+| `relate_{object}` | Object records, for example `relate_person` |
+| `relate_relationships` | Relationship rows |
+| `relate_activities` | Activity timeline rows |
+| `relate_lists` | List definitions |
 | `relate_list_items` | Static list membership |
-| `relate_migrations` | Migration tracking |
+| `relate_migrations` | Applied migration tracking |
 
-New attributes added to the schema automatically become new columns via `ALTER TABLE ADD COLUMN`.
+When you add a new attribute to a schema, `migrate()` adds the corresponding column automatically.
 
-## Migrations
+## Type Mapping
 
-For structural changes (rename/drop columns), use tracked migrations:
+| Relate type | SQLite type |
+|-------------|-------------|
+| `text`, `email`, `url`, `select` | `TEXT` |
+| `ref` | `TEXT` |
+| `number` | `REAL` |
+| `boolean` | `INTEGER` |
+| `date` | `INTEGER` |
+
+### Notes
+
+- `boolean` is stored as `1` / `0`
+- `date` is stored as a millisecond timestamp
+- `ref` columns are auto-indexed
+
+## Ref guarantees on D1
+
+The D1 adapter supports the stronger ref mutation path:
+
+- Cascade deletes and `set_null` updates are planned first
+- The full record-mutation plan is committed through a single D1 `batch()` call
+- Hooks fire only after the batch succeeds
+
+That means ref cascades are atomic on D1.
+
+## Tracked Migrations
+
+Use `applyMigrations()` for schema changes that are not simple “add a new column” changes.
 
 ```typescript
 import { renameColumn, dropColumn } from '@nokto-labs/relate-d1'
@@ -86,24 +115,13 @@ await db.applyMigrations([
 ```
 
 Helpers:
-- `renameColumn(db, objectSlug, oldName, newName)` — SQLite 3.25+
-- `dropColumn(db, objectSlug, columnName)` — SQLite 3.35+
 
-Migrations are idempotent — re-running skips already-applied migrations.
+- `renameColumn(db, objectSlug, oldName, newName)`
+- `dropColumn(db, objectSlug, columnName)`
 
-## Type mapping
+Migrations are tracked in `relate_migrations` and only run once.
 
-| Relate type | SQLite type |
-|-------------|-------------|
-| `text`, `email`, `url`, `select` | `TEXT` |
-| `ref` | `TEXT` (auto-indexed) |
-| `number` | `REAL` |
-| `boolean` | `INTEGER` (1/0) |
-| `date` | `INTEGER` (ms timestamp) |
-
-Ref cascade deletes and `set_null` updates are committed through a single D1 `batch()` call, so the full record-mutation plan is atomic on D1.
-
-## With Cloudflare Workers
+## Worker Example
 
 ```typescript
 import { Hono } from 'hono'
@@ -112,14 +130,25 @@ import { D1Adapter } from '@nokto-labs/relate-d1'
 import { relateRoutes } from '@nokto-labs/relate-hono'
 import { schema } from './schema'
 
-interface Env { DB: D1Database }
+interface Env {
+  DB: D1Database
+}
 
 const app = new Hono<{ Bindings: Env }>()
 
 app.route('/', relateRoutes({
   schema,
-  db: (c: { env: Env }) => relate({ adapter: new D1Adapter(c.env.DB), schema }),
+  db: (c: { env: Env }) => relate({
+    adapter: new D1Adapter(c.env.DB),
+    schema,
+  }),
 }))
 
 export default app
 ```
+
+## Good to Know
+
+- Call `migrate()` during startup or through a setup route before writing records
+- `migrate()` is additive; renames and drops belong in `applyMigrations()`
+- The adapter stores schema metadata in memory through `setSchema()` so reads and writes work before the next migration run

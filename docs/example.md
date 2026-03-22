@@ -1,8 +1,14 @@
 # Example: Cloudflare Worker
 
-A complete REST API running on Cloudflare Workers with D1. Three files.
+This is a complete Relate setup for Cloudflare Workers with D1 and Hono.
 
-## schema.ts
+The example has three files:
+
+1. `schema.ts`
+2. `index.ts`
+3. `wrangler.jsonc`
+
+## `schema.ts`
 
 ```typescript
 import { defineSchema } from '@nokto-labs/relate'
@@ -19,7 +25,6 @@ export const schema = defineSchema({
       },
       uniqueBy: 'email',
     },
-
     company: {
       plural: 'companies',
       attributes: {
@@ -30,7 +35,6 @@ export const schema = defineSchema({
       },
       uniqueBy: 'domain',
     },
-
     deal: {
       plural: 'deals',
       attributes: {
@@ -40,24 +44,22 @@ export const schema = defineSchema({
           type: 'select',
           options: ['lead', 'qualified', 'proposal', 'closed_won', 'closed_lost'] as const,
         },
-        currency: 'text',
         owner: { type: 'ref', object: 'person', onDelete: 'set_null' },
         company: { type: 'ref', object: 'company', onDelete: 'set_null' },
       },
     },
   },
-
   relationships: {
     works_at: { from: 'person', to: 'company' },
   },
 })
 ```
 
-## index.ts
+## `index.ts`
 
 ```typescript
 import { Hono } from 'hono'
-import { relate, EventBus } from '@nokto-labs/relate'
+import { EventBus, relate } from '@nokto-labs/relate'
 import { D1Adapter } from '@nokto-labs/relate-d1'
 import { relateRoutes } from '@nokto-labs/relate-hono'
 import { schema } from './schema'
@@ -68,12 +70,12 @@ interface Env {
 
 const events = new EventBus()
 
-events.on('person.created', async ({ record, db }: any) => {
+events.on('person.created', async ({ record, db }) => {
   console.log(`New person: ${record.email}`)
   await db.person.update(record.id, { source: 'api' })
 })
 
-events.on('deal.updated', ({ record, changes }: any) => {
+events.on('deal.updated', ({ record, changes }) => {
   if (changes.stage === 'closed_won') {
     console.log(`Deal won: ${record.title}`)
   }
@@ -84,13 +86,17 @@ const app = new Hono<{ Bindings: Env }>()
 app.route('/', relateRoutes({
   schema,
   events,
-  db: (c: { env: Env }) => relate({ adapter: new D1Adapter(c.env.DB), schema, events }),
+  db: (c: { env: Env }) => relate({
+    adapter: new D1Adapter(c.env.DB),
+    schema,
+    events,
+  }),
 }))
 
 export default app
 ```
 
-## wrangler.jsonc
+## `wrangler.jsonc`
 
 ```jsonc
 {
@@ -102,78 +108,91 @@ export default app
     {
       "binding": "DB",
       "database_name": "my-app",
-      // Run: wrangler d1 create my-app — then paste the ID here
       "database_id": ""
     }
   ]
 }
 ```
 
-## What you get
+Create the D1 database first, then paste the generated ID into `database_id`.
 
-Run `POST /migrate` once, then:
-
-```bash
-# People
-POST   /people              # create (rejects duplicates)
-PUT    /people              # upsert by email
-GET    /people              # list, filter, paginate
-GET    /people/:id          # get by ID
-PATCH  /people/:id          # update
-DELETE /people/:id          # delete (cascades relationships + list items)
-
-# Same for /companies, /deals
-
-# Nested ref routes (auto-generated from ref attributes)
-GET    /people/:id/deals         # deals owned by person
-POST   /people/:id/deals         # create deal with owner = person
-GET    /companies/:id/deals      # deals for company
-
-# Relationships
-POST   /relationships       # link any two records
-GET    /relationships       # list all
-GET    /relationships/people/:id  # list for a person
-
-# Activities
-POST   /activities          # track events
-GET    /activities/deals/:id     # timeline for a deal
-
-# Lists
-POST   /lists               # create static or dynamic list
-GET    /lists/:id/items     # get items (with filters)
-POST   /lists/:id/items     # add items to static list
-
-# Meta
-GET    /schema              # introspect schema
-POST   /migrate             # run migrations
-```
-
-## Filtering examples
-
-```bash
-# Equality
-GET /people?tier=vip
-
-# Operators
-GET /deals?value[gte]=10000&value[lt]=100000
-GET /deals?stage[in]=lead,qualified
-GET /people?name[like]=Ali%
-
-# Ref filtering
-GET /deals?owner=person-id
-GET /deals?company[in]=id1,id2
-
-# Cursor pagination
-GET /people?limit=20&cursor=eyJ2Ijo...
-
-# Count
-GET /deals/count?stage=closed_won
-```
-
-## Install
+## Install and run
 
 ```bash
 npm install @nokto-labs/relate @nokto-labs/relate-d1 @nokto-labs/relate-hono hono
 npx wrangler d1 create my-app
 npx wrangler dev
+```
+
+## First request
+
+Run migrations once before writing records:
+
+```bash
+curl -X POST http://127.0.0.1:8787/migrate
+```
+
+Then create some records:
+
+```bash
+curl -X POST http://127.0.0.1:8787/people \
+  -H 'content-type: application/json' \
+  -d '{"email":"alice@acme.com","name":"Alice","tier":"vip"}'
+
+curl -X POST http://127.0.0.1:8787/companies \
+  -H 'content-type: application/json' \
+  -d '{"domain":"acme.com","name":"Acme"}'
+
+curl -X POST http://127.0.0.1:8787/deals \
+  -H 'content-type: application/json' \
+  -d '{"title":"Annual renewal","value":50000}'
+```
+
+## Routes you get
+
+### Records
+
+```text
+POST   /people
+PUT    /people
+GET    /people
+GET    /people/:id
+PATCH  /people/:id
+DELETE /people/:id
+```
+
+The same pattern is generated for `/companies` and `/deals`.
+
+### Nested ref routes
+
+```text
+GET  /people/:id/deals
+POST /people/:id/deals
+GET  /companies/:id/deals
+POST /companies/:id/deals
+```
+
+### Relationships, activities, and lists
+
+```text
+POST /relationships
+GET  /relationships/people/:id
+
+POST /activities
+GET  /activities/deals/:id
+
+POST /lists
+GET  /lists/:id/items
+POST /lists/:id/items
+```
+
+## Filtering examples
+
+```text
+GET /people?tier=vip
+GET /deals?value[gte]=10000&value[lt]=100000
+GET /deals?owner=person-id
+GET /deals?company[in]=id1,id2
+GET /people?limit=20&cursor=eyJ2Ijo...
+GET /deals/count?stage=closed_won
 ```

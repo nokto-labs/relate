@@ -1,12 +1,16 @@
-# relate-hono
+# `@nokto-labs/relate-hono`
 
-Hono REST API routes for Relate. One function gives you a full REST API.
+Generate a full Hono API from a Relate schema.
+
+Use this package when you already have a Relate model and want a REST layer without hand-writing CRUD routes.
+
+## Install
 
 ```bash
-npm install @nokto-labs/relate @nokto-labs/relate-d1 @nokto-labs/relate-hono
+npm install @nokto-labs/relate @nokto-labs/relate-d1 @nokto-labs/relate-hono hono
 ```
 
-## Quick start
+## Quick Start
 
 ```typescript
 import { Hono } from 'hono'
@@ -15,90 +19,186 @@ import { D1Adapter } from '@nokto-labs/relate-d1'
 import { relateRoutes } from '@nokto-labs/relate-hono'
 import { schema } from './schema'
 
-interface Env { DB: D1Database }
+interface Env {
+  DB: D1Database
+}
 
 const app = new Hono<{ Bindings: Env }>()
 
 app.route('/', relateRoutes({
   schema,
-  db: (c: { env: Env }) => relate({ adapter: new D1Adapter(c.env.DB), schema }),
+  db: (c: { env: Env }) => relate({
+    adapter: new D1Adapter(c.env.DB),
+    schema,
+  }),
 }))
 
 export default app
 ```
 
-## Endpoints
+## What It Generates
 
-### Records (`/:plural`)
+Relate Hono can generate routes for:
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/:plural` | Create record |
-| `PUT` | `/:plural` | Upsert record |
-| `GET` | `/:plural` | List records |
-| `GET` | `/:plural/:id` | Get record |
-| `GET` | `/:plural/count` | Count records |
-| `PATCH` | `/:plural/:id` | Update record |
-| `DELETE` | `/:plural/:id` | Delete record |
+- records
+- nested ref routes
+- relationships
+- activities
+- lists
+- schema inspection
+- migrations
 
-Query params for list: `limit`, `offset`, `orderBy`, `order`, `cursor`, plus filter params.
+Every route group can be disabled individually.
 
-### Nested ref routes
+## Records
 
-For each unambiguous `ref` attribute, nested routes are automatically generated:
+### CRUD routes
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/:parentPlural/:parentId/:childPlural` | List child records filtered by ref |
-| `POST` | `/:parentPlural/:parentId/:childPlural` | Create child with parent ID injected |
+| `POST` | `/:plural` | Create |
+| `PUT` | `/:plural` | Upsert |
+| `GET` | `/:plural` | List |
+| `GET` | `/:plural/:id` | Get by ID |
+| `GET` | `/:plural/count` | Count |
+| `PATCH` | `/:plural/:id` | Update |
+| `DELETE` | `/:plural/:id` | Delete |
 
-Example: if `checkin` has `event: { type: 'ref', object: 'event' }`:
+### Query params
 
+List routes support:
+
+- `limit`
+- `offset`
+- `orderBy`
+- `order`
+- `cursor`
+- filter params that map to Relate filter operators
+
+`GET /:plural/count` accepts the same filter params as `GET /:plural`.
+
+## Nested ref routes
+
+For each unambiguous ref field, Relate generates nested child routes automatically.
+
+```typescript
+checkin: {
+  plural: 'checkins',
+  attributes: {
+    event: { type: 'ref', object: 'event', required: true },
+    guest: { type: 'ref', object: 'guest', required: true },
+  },
+}
 ```
-GET  /events/:eventId/checkins         → list checkins for event
-POST /events/:eventId/checkins         → create checkin with event = eventId
-```
 
-Flat routes still work alongside nested routes (`GET /checkins?event=id`). No nested `PUT`/`DELETE` — use flat `/checkins/:id` for those.
-
-If a child object has multiple refs to the same parent object, the short path would be ambiguous. In that case, Relate generates explicit ref-field paths instead:
+That generates:
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/:parentPlural/:parentId/:childPlural/by/<refField>` | List child records filtered by a specific ref field |
-| `POST` | `/:parentPlural/:parentId/:childPlural/by/<refField>` | Create child with a specific ref field injected |
+| `GET` | `/events/:eventId/checkins` | List checkins for an event |
+| `POST` | `/events/:eventId/checkins` | Create a checkin with `event = eventId` |
+| `GET` | `/guests/:guestId/checkins` | List checkins for a guest |
+| `POST` | `/guests/:guestId/checkins` | Create a checkin with `guest = guestId` |
 
-Example: if `message` has both `author` and `reviewer` refs to `user`:
+Flat routes still work alongside nested routes:
 
+```text
+GET /checkins?event=evt_123
 ```
-GET  /users/:userId/messages/by/author
-POST /users/:userId/messages/by/reviewer
+
+### Ambiguous parent-child pairs
+
+If a child has multiple refs to the same parent object, the short path would be ambiguous.
+
+Example:
+
+```typescript
+message: {
+  plural: 'messages',
+  attributes: {
+    author: { type: 'ref', object: 'user', required: true },
+    reviewer: { type: 'ref', object: 'user', required: true },
+    text: { type: 'text', required: true },
+  },
+}
 ```
 
-### Filtering
+Relate generates explicit ref-field routes instead:
 
-```
+| Method | Path |
+|--------|------|
+| `GET` | `/users/:userId/messages/by/author` |
+| `POST` | `/users/:userId/messages/by/author` |
+| `GET` | `/users/:userId/messages/by/reviewer` |
+| `POST` | `/users/:userId/messages/by/reviewer` |
+
+## Filtering
+
+Query params map directly to Relate filters.
+
+```text
 GET /deals?stage=won
 GET /deals?value[gte]=10000&value[lt]=100000
 GET /deals?stage[in]=lead,qualified,proposal
 GET /people?name[like]=Ali%
 ```
 
-### Cursor pagination
+### Operator reference
 
-```
+| Operator | Query shape | Example |
+|----------|-------------|---------|
+| equality shorthand | `?field=value` | `?stage=won` |
+| `eq` | `?field[eq]=value` | `?stage[eq]=won` |
+| `ne` | `?field[ne]=value` | `?stage[ne]=lost` |
+| `gt` | `?field[gt]=value` | `?value[gt]=1000` |
+| `gte` | `?field[gte]=value` | `?value[gte]=1000` |
+| `lt` | `?field[lt]=value` | `?value[lt]=5000` |
+| `lte` | `?field[lte]=value` | `?value[lte]=5000` |
+| `in` | `?field[in]=a,b,c` | `?stage[in]=lead,won` |
+| `like` | `?field[like]=pattern` | `?name[like]=Ali%` |
+
+### Value parsing
+
+HTTP filters are parsed by attribute type:
+
+| Attribute type | Accepted query values |
+|----------------|-----------------------|
+| `text`, `email`, `url`, `select`, `ref` | strings |
+| `number` | numeric strings like `42` or `10.5` |
+| `boolean` | `true`, `false`, `1`, `0` |
+| `date` | ISO strings or millisecond timestamps |
+
+### Notes
+
+- `like` is supported for `text`, `email`, `url`, `select`, and `ref`
+- `in` values are comma-separated in the query string
+- Reserved query params are `limit`, `offset`, `orderBy`, `order`, and `cursor`
+- The same filter syntax works on record list routes and record count routes
+
+## Cursor pagination
+
+```text
 GET /people?limit=20&cursor=eyJ2Ijo...
 ```
 
-Returns `{ records: [...], nextCursor: "..." }`.
+Cursor responses return:
+
+```json
+{
+  "records": [],
+  "nextCursor": "..."
+}
+```
+
+## Other route groups
 
 ### Relationships
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/relationships` | Create relationship |
+| `POST` | `/relationships` | Create |
 | `GET` | `/relationships` | List all |
-| `GET` | `/relationships/:plural/:id` | List for record |
+| `GET` | `/relationships/:plural/:id` | List for a record |
 | `PATCH` | `/relationships/:id` | Update |
 | `DELETE` | `/relationships/:id` | Delete |
 
@@ -106,45 +206,46 @@ Returns `{ records: [...], nextCursor: "..." }`.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/activities` | Track activity |
+| `POST` | `/activities` | Track |
 | `GET` | `/activities` | List all |
-| `GET` | `/activities/:plural/:id` | List for record |
+| `GET` | `/activities/:plural/:id` | List for a record |
 
 ### Lists
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/lists` | Create list |
+| `POST` | `/lists` | Create |
 | `GET` | `/lists` | List all |
-| `GET` | `/lists/:id` | Get list |
-| `PATCH` | `/lists/:id` | Update list |
-| `DELETE` | `/lists/:id` | Delete list |
+| `GET` | `/lists/:id` | Get |
+| `PATCH` | `/lists/:id` | Update |
+| `DELETE` | `/lists/:id` | Delete |
 | `POST` | `/lists/:id/items` | Add items |
 | `DELETE` | `/lists/:id/items` | Remove items |
-| `GET` | `/lists/:id/items` | Get items |
+| `GET` | `/lists/:id/items` | List items |
 | `GET` | `/lists/:id/count` | Count items |
 
-### Other
+`GET /lists/:id/items` supports `filter`, `limit`, `offset`, and `cursor`.
+
+`GET /lists/:id/count` supports `filter` params as well.
+
+### Meta
 
 | Method | Path | Description |
 |--------|------|-------------|
+| `GET` | `/schema` | Return the schema |
 | `POST` | `/migrate` | Run migrations |
-| `GET` | `/schema` | Get schema definition |
 
 ## Options
 
 ```typescript
 app.route('/', relateRoutes({
-  // Required
   schema,
   db: (c: { env: Env }) => relate({ adapter: new D1Adapter(c.env.DB), schema }),
-
-  // Optional
-  events,                          // shared EventBus for hooks
-  prefix: '/api/v1',               // prefix all routes
-  middleware: [auth, rateLimit],   // run before every route
-  maxLimit: 100,                   // cap ?limit= to prevent table dumps
-  routes: {                        // toggle route groups
+  events,
+  prefix: '/api/v1',
+  middleware: [auth, rateLimit],
+  maxLimit: 100,
+  routes: {
     schema: true,
     migrate: true,
     records: true,
@@ -155,9 +256,19 @@ app.route('/', relateRoutes({
 }))
 ```
 
-## Middleware
+### Option summary
 
-Add auth, rate limiting, or any Hono middleware:
+| Option | Purpose |
+|--------|---------|
+| `schema` | Your Relate schema |
+| `db` | Factory that returns a Relate instance per request |
+| `events` | Shared `EventBus` for request-time hooks |
+| `prefix` | Prefix all generated routes |
+| `middleware` | Hono middleware to run before routes |
+| `maxLimit` | Cap `?limit=` values |
+| `routes` | Enable or disable route groups |
+
+## Middleware
 
 ```typescript
 const auth: MiddlewareHandler = async (c, next) => {
@@ -173,27 +284,12 @@ app.route('/', relateRoutes({
 }))
 ```
 
-## Prefix
-
-```typescript
-// All routes under /api/v1
-app.route('/', relateRoutes({ schema, db, prefix: '/api/v1' }))
-// → POST /api/v1/people, GET /api/v1/relationships, etc.
-```
-
-## Disable routes
-
-```typescript
-// No list or activity endpoints
-app.route('/', relateRoutes({ schema, db, routes: { lists: false, activities: false } }))
-```
-
 ## Errors
 
-All SDK errors are automatically mapped to HTTP status codes:
+Relate SDK errors are mapped to HTTP responses automatically.
 
-| Error | Status |
-|-------|--------|
+| Error code | Status |
+|------------|--------|
 | `DUPLICATE_RECORD` | 409 |
 | `RECORD_NOT_FOUND` | 404 |
 | `RELATIONSHIP_NOT_FOUND` | 404 |
@@ -204,7 +300,7 @@ All SDK errors are automatically mapped to HTTP status codes:
 | `REF_CONSTRAINT` | 409 |
 | `CASCADE_DEPTH_EXCEEDED` | 500 |
 
-Response format:
+Response shape:
 
 ```json
 {
@@ -217,3 +313,10 @@ Response format:
   }
 }
 ```
+
+## Good to Know
+
+- `db` must be a factory function, not a shared Relate instance
+- Pass the same `EventBus` to `relate()` and `relateRoutes()` if you want hooks during API requests
+- Nested ref routes only exist for ref fields
+- Use flat `PATCH` and `DELETE` routes for child records even when nested create/list routes exist
