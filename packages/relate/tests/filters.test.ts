@@ -33,6 +33,15 @@ describe('filter helpers', () => {
       expect(matchesFilter(record, { stage: 'won' })).toBe(false)
       expect(matchesFilter(record, { value: { gt: 100 } })).toBe(false)
     })
+
+    it('treats null filters as matching absent optional values', () => {
+      const record = { stage: 'lead' }
+
+      expect(matchesFilter(record, { paymentId: null })).toBe(true)
+      expect(matchesFilter(record, { paymentId: { eq: null } })).toBe(true)
+      expect(matchesFilter(record, { paymentId: { ne: null } })).toBe(false)
+      expect(matchesFilter(record, { paymentId: { in: [null, 'pay_123'] } })).toBe(true)
+    })
   })
 
   describe('mergeFilters', () => {

@@ -32,7 +32,12 @@ export function parseFilterClauses(
       throw new ValidationError({ message: `Unknown filter attribute "${key}"`, field: key })
     }
 
-    if (value === null || value === undefined || typeof value !== 'object' || value instanceof Date || Array.isArray(value)) {
+    if (value === null) {
+      clauses.push(`${column} IS NULL`)
+      continue
+    }
+
+    if (value === undefined || typeof value !== 'object' || value instanceof Date || Array.isArray(value)) {
       clauses.push(`${column} = ?`)
       bindings.push(attrSchema ? filterValueToSql(attrSchema, value, key) : value)
       continue
@@ -46,11 +51,21 @@ export function parseFilterClauses(
 
       if (op === 'in') {
         const arr = opValue as unknown[]
+        const hasNull = arr.some((entry) => entry === null)
+        const nonNullEntries = arr.filter((entry) => entry !== null)
+
         if (arr.length === 0) {
           clauses.push('0')
+        } else if (nonNullEntries.length === 0 && hasNull) {
+          clauses.push(`${column} IS NULL`)
         } else {
-          clauses.push(`${column} IN (${arr.map(() => '?').join(', ')})`)
-          bindings.push(...arr.map((entry) => (attrSchema ? filterValueToSql(attrSchema, entry, key) : entry)))
+          const inClause = `${column} IN (${nonNullEntries.map(() => '?').join(', ')})`
+          if (hasNull) {
+            clauses.push(`(${inClause} OR ${column} IS NULL)`)
+          } else {
+            clauses.push(inClause)
+          }
+          bindings.push(...nonNullEntries.map((entry) => (attrSchema ? filterValueToSql(attrSchema, entry, key) : entry)))
         }
       } else if (op === 'like') {
         if (attrSchema) {
@@ -61,6 +76,10 @@ export function parseFilterClauses(
         }
         clauses.push(`${column} ${OP_TO_SQL[op]} ?`)
         bindings.push(opValue)
+      } else if (op === 'eq' && opValue === null) {
+        clauses.push(`${column} IS NULL`)
+      } else if (op === 'ne' && opValue === null) {
+        clauses.push(`${column} IS NOT NULL`)
       } else {
         clauses.push(`${column} ${OP_TO_SQL[op]} ?`)
         bindings.push(attrSchema ? filterValueToSql(attrSchema, opValue, key) : opValue)

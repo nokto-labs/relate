@@ -6,6 +6,7 @@ export { RelateError, NotFoundError, DuplicateError, ValidationError, RefNotFoun
 export type { ErrorCode, ErrorDetail } from './errors'
 
 export type { Relate } from './relate'
+export type { WebhookOptions, WebhookResult } from './modules/webhook'
 export type {
   StorageAdapter,
   CreateRelationshipInput,
@@ -18,7 +19,11 @@ export type {
   ListRelationshipsOptions,
   PaginatedResult,
   UpsertResult,
+  WebhookExecution,
+  ClaimWebhookInput,
+  WebhookClaimResult,
   RecordMutation,
+  CreateRecordMutation,
   UpdateRecordMutation,
   DeleteRecordMutation,
   CleanupRecordRefsMutation,
@@ -27,6 +32,7 @@ export type {
   ListListsOptions,
   ListItemsOptions,
 } from './adapter'
+export type { BatchBuilder, BatchObjectClient, BatchCreateHandle } from './modules/batch'
 export type {
   RelateRecord,
   RelateList,

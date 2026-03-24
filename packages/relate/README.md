@@ -112,6 +112,9 @@ await db.relationships.create({
 | `db.lists` | Lists client |
 | `db.migrate()` | Sync schema to storage |
 | `db.applyMigrations(migrations)` | Run tracked custom migrations |
+| `db.batch(builder)` | Atomically commit queued record creates and updates when the adapter supports batched mutations |
+| `db.webhook(externalId, handler, options?)` | Deduplicate webhook handlers with built-in retry state when the adapter supports it |
+| `db.cleanupWebhooks(before?)` | Delete old processed webhook entries when the adapter supports webhook cleanup |
 | `db.on(event, handler)` | Register a lifecycle hook |
 | `db.off(event, handler)` | Remove a lifecycle hook |
 
@@ -128,6 +131,53 @@ await db.relationships.create({
 | `aggregate(options)` | Count, group, and sum matching records |
 | `update(id, attributes)` | Partially update a record |
 | `delete(id)` | Delete a record |
+
+### `batch()` atomic writes
+
+Use `db.batch()` when you need several writes to succeed or fail together without dropping to raw SQL.
+
+```typescript
+const result = await db.batch((b) => {
+  const order = b.deal.create({ title: 'Launch', stage: 'lead' })
+  b.deal.update(order.id, { stage: 'won' })
+  return { orderId: order.id }
+})
+```
+
+`batch()` is intentionally a write builder, not a general transaction callback:
+
+- the callback must stay synchronous
+- reads such as `get()`, `find()`, and `count()` are not available inside the builder
+- v1 supports `create()` and `update()`
+- hooks fire only after the full batch commits successfully
+- refs can target records created earlier in the same batch by using the returned handle `id`
+
+`batch()` gives you atomicity for the queued write set. It does not solve read-then-write races such as stock checks or counters.
+
+### `webhook()` idempotency helper
+
+Use `db.webhook()` when you want built-in webhook claim state without defining your own `webhookEvent` object.
+
+```typescript
+const result = await db.webhook('stripe:evt_123', async () => {
+  await db.contact.upsert({ email: 'alice@example.com' })
+  await db.deal.create({ title: 'Webhook order' })
+  return 'processed'
+})
+```
+
+Behavior:
+
+- the handler runs only when Relate claims a fresh or retryable webhook key
+- already processed keys return `{ executed: false, reason: 'processed' }`
+- in-flight keys with an active lease return `{ executed: false, reason: 'processing' }`
+- handler errors release the claim and record retry state so a later call can run again
+- if a handler runs longer than its lease, another caller can reclaim the key and the original completion update will be ignored
+- `db.cleanupWebhooks(before?)` deletes processed webhook rows older than the chosen cutoff
+
+This helper is honest about D1’s limits: it tracks claims, processed timestamps, and retry state, but it is not a true exact-once transaction across crashes. Keep the writes inside your handler idempotent if a crash between side effects and `processedAt` would matter.
+
+You can pass `options.leaseMs` when a handler may legitimately run longer than the default claim lease.
 
 ### `find()` options
 
@@ -240,6 +290,11 @@ await db.deal.find({
     stage: { in: ['lead', 'qualified'] },
   },
 })
+
+await db.order.count({
+  account: accountId,
+  paymentId: { eq: null },
+})
 ```
 
 ### Operators
@@ -256,6 +311,22 @@ await db.deal.find({
 | `in` | `{ field: { in: [...] } }` | `{ stage: { in: ['lead', 'won'] } }` |
 | `like` | `{ field: { like: pattern } }` | `{ name: { like: 'Ali%' } }` |
 
+### Null filtering
+
+Optional attributes can be filtered with `null` through the typed SDK:
+
+```typescript
+await db.order.find({ filter: { paymentId: null } })
+await db.order.count({ paymentId: { eq: null } })
+await db.order.find({ filter: { paymentId: { in: [null, 'pay_123'] } } })
+```
+
+Notes:
+
+- equality shorthand accepts `null` on optional fields
+- `eq`, `ne`, and `in` also accept `null` where the attribute type is optional
+- range operators such as `gt` and `lt` stay non-nullable
+
 ### Filter value types
 
 | Attribute type | Filter value |
@@ -264,6 +335,8 @@ await db.deal.find({
 | `number` | number |
 | `boolean` | boolean |
 | `date` | `Date` |
+
+Optional attributes also accept `null` for equality-style filters.
 
 ## Aggregates
 
@@ -302,6 +375,7 @@ const revenueByPrice = await db.ticket.aggregate({
 - `groupBy` and `sum` can be combined in one call; grouped sums are returned as `groupSums`
 - `sum.field` supports direct numeric attributes everywhere
 - `sum.field` can also traverse exactly one ref hop, for example `price.amountCents`, when the adapter implements native aggregate joins
+- ref sums still typecheck when that ref is optional, for example `price` with `onDelete: 'set_null'`
 - `groupBy` stays limited to direct attributes in v2
 - If an adapter does not implement native aggregates, Relate falls back to a JavaScript implementation for direct-field aggregates, logs a warning, and loads matching records into memory
 - Ref-aware aggregate sums require native adapter support and do not silently fall back to JavaScript joins

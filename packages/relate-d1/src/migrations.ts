@@ -56,6 +56,20 @@ const BASE_DDL = [
     id TEXT PRIMARY KEY,
     applied_at INTEGER NOT NULL
   )`,
+
+  `CREATE TABLE IF NOT EXISTS relate_webhooks (
+    external_id TEXT PRIMARY KEY,
+    claim_token TEXT,
+    claimed_at INTEGER NOT NULL,
+    lease_expires_at INTEGER,
+    processed_at INTEGER,
+    last_error TEXT,
+    attempt_count INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  )`,
+
+  `CREATE INDEX IF NOT EXISTS idx_webhooks_processed_at ON relate_webhooks(processed_at)`,
 ]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

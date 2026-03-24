@@ -1,6 +1,6 @@
 {
   "name": "@nokto-labs/relate-d1",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Cloudflare D1 storage adapter for @nokto-labs/relate.",
   "type": "module",
   "license": "MIT",
@@ -26,7 +26,7 @@
   "files": ["dist", "README.md"],
   "scripts": {
     "build": "tsup",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc -p tsconfig.typecheck.json --noEmit",
     "dev": "tsup --watch",
     "prepublishOnly": "pnpm run build && pnpm run typecheck"
   },

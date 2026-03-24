@@ -68,7 +68,7 @@ const TABLES = [
   'relate_guest', 'relate_event', 'relate_checkin',
   'relate_user', 'relate_message',
   'relate_relationships', 'relate_activities',
-  'relate_lists', 'relate_list_items', 'relate_migrations',
+  'relate_lists', 'relate_list_items', 'relate_migrations', 'relate_webhooks',
 ]
 
 async function resetDB() {

@@ -85,22 +85,12 @@ export async function createRecord(
   objectSchema: ObjectSchema,
   attributes: Record<string, unknown>,
 ): Promise<RelateRecord> {
-  const table = tableName(objectSlug)
   const id = crypto.randomUUID()
   const now = Date.now()
-
   const attrEntries = Object.entries(objectSchema.attributes)
-  const cols = ['id', ...attrEntries.map(([k]) => k), 'created_at', 'updated_at']
-  const placeholders = cols.map(() => '?').join(', ')
-  const values = [
-    id,
-    ...attrEntries.map(([k, s]) => valueToSql(s, attributes[k], k)),
-    now,
-    now,
-  ]
 
   try {
-    await db.prepare(`INSERT INTO ${table} (${cols.join(', ')}) VALUES (${placeholders})`).bind(...values).run()
+    await createRecordStatement(db, objectSlug, objectSchema, id, attributes, now).run()
   } catch (error) {
     maybeThrowDuplicate(error, objectSlug, objectSchema, attributes)
     throw error
@@ -112,6 +102,28 @@ export async function createRecord(
     created_at: now,
     updated_at: now,
   })
+}
+
+export function createRecordStatement(
+  db: D1Database,
+  objectSlug: string,
+  objectSchema: ObjectSchema,
+  id: string,
+  attributes: Record<string, unknown>,
+  createdAtMs: number,
+): D1PreparedStatement {
+  const table = tableName(objectSlug)
+  const attrEntries = Object.entries(objectSchema.attributes)
+  const cols = ['id', ...attrEntries.map(([key]) => key), 'created_at', 'updated_at']
+  const placeholders = cols.map(() => '?').join(', ')
+  const values = [
+    id,
+    ...attrEntries.map(([key, schema]) => valueToSql(schema, attributes[key], key)),
+    createdAtMs,
+    createdAtMs,
+  ]
+
+  return db.prepare(`INSERT INTO ${table} (${cols.join(', ')}) VALUES (${placeholders})`).bind(...values)
 }
 
 export async function upsertRecord(

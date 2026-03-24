@@ -1,7 +1,7 @@
-import type { StorageAdapter, CreateRelationshipInput, TrackActivityInput, FindRecordsOptions, ListActivitiesOptions, ListRelationshipsOptions, PaginatedResult, UpsertResult, Migration, CreateListInput, ListListsOptions, ListItemsOptions, RelateRecord, RelateList, Relationship, Activity, SchemaInput, ObjectSchema, AggregateRecordsOptions, AggregateRecordsResult } from '@nokto-labs/relate'
+import type { StorageAdapter, CreateRelationshipInput, TrackActivityInput, FindRecordsOptions, ListActivitiesOptions, ListRelationshipsOptions, PaginatedResult, UpsertResult, Migration, CreateListInput, ListListsOptions, ListItemsOptions, RelateRecord, RelateList, Relationship, Activity, SchemaInput, ObjectSchema, AggregateRecordsOptions, AggregateRecordsResult, RecordMutation, ClaimWebhookInput, WebhookClaimResult } from '@nokto-labs/relate'
 import type { D1Database, D1PreparedStatement } from './d1-types'
 import { migrate, applyMigrations } from './migrations'
-import { createRecord, upsertRecord, getRecord, updateRecord, updateRecordStatement, deleteRecord, deleteRecordStatement } from './records/crud'
+import { createRecord, createRecordStatement, upsertRecord, getRecord, updateRecord, updateRecordStatement, deleteRecord, deleteRecordStatement } from './records/crud'
 import { findRecords, findRecordsPage, countRecords } from './records/queries'
 import { aggregateRecords } from './records/aggregate'
 import * as relationships from './relationships'
@@ -9,11 +9,12 @@ import * as activities from './activities'
 import { createList, getList, listLists, updateList, deleteList } from './lists/crud'
 import { addToList, removeFromList, listItems, countListItems } from './lists/items'
 import { cleanupRecordRefs, cleanupRecordRefStatements } from './cleanup'
-
-type D1RecordMutation =
-  | { type: 'update'; objectSlug: string; id: string; attributes: Record<string, unknown>; updatedAtMs: number }
-  | { type: 'delete'; objectSlug: string; id: string }
-  | { type: 'cleanup'; objectSlug: string; id: string }
+import {
+  claimWebhook as claimWebhookEvent,
+  completeWebhook as completeWebhookEvent,
+  failWebhook as failWebhookEvent,
+  cleanupWebhooks as cleanupWebhookEvents,
+} from './webhooks'
 
 export class D1Adapter implements StorageAdapter {
   private schema: SchemaInput = {}
@@ -79,12 +80,41 @@ export class D1Adapter implements StorageAdapter {
     return cleanupRecordRefs(this.db, objectSlug, id)
   }
 
-  async commitRecordMutations(mutations: D1RecordMutation[]): Promise<void> {
+  async commitRecordMutations(mutations: RecordMutation[]): Promise<void> {
     if (mutations.length === 0) return
     await this.db.batch(mutations.flatMap((mutation) => this.mutationStatements(mutation)))
   }
 
-  private mutationStatements(mutation: D1RecordMutation): D1PreparedStatement[] {
+  claimWebhook(input: ClaimWebhookInput): Promise<WebhookClaimResult> {
+    return claimWebhookEvent(this.db, input)
+  }
+
+  completeWebhook(externalId: string, claimToken: string, processedAtMs: number): Promise<void> {
+    return completeWebhookEvent(this.db, externalId, claimToken, processedAtMs)
+  }
+
+  failWebhook(externalId: string, claimToken: string, failedAtMs: number, errorMessage: string): Promise<void> {
+    return failWebhookEvent(this.db, externalId, claimToken, failedAtMs, errorMessage)
+  }
+
+  cleanupWebhooks(processedBeforeMs: number): Promise<void> {
+    return cleanupWebhookEvents(this.db, processedBeforeMs)
+  }
+
+  private mutationStatements(mutation: RecordMutation): D1PreparedStatement[] {
+    if (mutation.type === 'create') {
+      return [
+        createRecordStatement(
+          this.db,
+          mutation.objectSlug,
+          this.objectSchema(mutation.objectSlug),
+          mutation.id,
+          mutation.attributes,
+          mutation.createdAtMs,
+        ),
+      ]
+    }
+
     if (mutation.type === 'update') {
       return [
         updateRecordStatement(

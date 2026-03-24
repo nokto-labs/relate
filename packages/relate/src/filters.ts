@@ -16,6 +16,11 @@ function toComparable(value: unknown): unknown {
   return value instanceof Date ? value.getTime() : value
 }
 
+function toNullableComparable(value: unknown): unknown {
+  if (value === undefined) return null
+  return toComparable(value)
+}
+
 function escapeLikePattern(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
@@ -31,7 +36,7 @@ export function matchesFilter(record: Record<string, unknown>, filter: Record<st
     const actual = record[key]
 
     if (!isFilterOperatorObject(expected)) {
-      if (toComparable(actual) !== toComparable(expected)) return false
+      if (toNullableComparable(actual) !== toNullableComparable(expected)) return false
       continue
     }
 
@@ -40,16 +45,18 @@ export function matchesFilter(record: Record<string, unknown>, filter: Record<st
 
       const comparableActual = toComparable(actual)
       const comparableExpected = toComparable(opValue)
+      const nullableComparableActual = toNullableComparable(actual)
+      const nullableComparableExpected = toNullableComparable(opValue)
 
-      if (op === 'eq' && comparableActual !== comparableExpected) return false
-      if (op === 'ne' && comparableActual === comparableExpected) return false
+      if (op === 'eq' && nullableComparableActual !== nullableComparableExpected) return false
+      if (op === 'ne' && nullableComparableActual === nullableComparableExpected) return false
       if (op === 'gt' && !(comparableActual! > comparableExpected!)) return false
       if (op === 'gte' && !(comparableActual! >= comparableExpected!)) return false
       if (op === 'lt' && !(comparableActual! < comparableExpected!)) return false
       if (op === 'lte' && !(comparableActual! <= comparableExpected!)) return false
       if (op === 'in') {
-        const values = Array.isArray(opValue) ? opValue.map((value) => toComparable(value)) : []
-        if (!values.includes(comparableActual)) return false
+        const values = Array.isArray(opValue) ? opValue.map((value) => toNullableComparable(value)) : []
+        if (!values.includes(nullableComparableActual)) return false
       }
       if (op === 'like' && !matchesLike(actual, String(opValue))) return false
     }

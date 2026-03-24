@@ -39,6 +39,37 @@ export interface UpsertResult<T = RelateRecord> {
   isNew: boolean
 }
 
+export interface WebhookExecution {
+  externalId: string
+  claimedAt: Date
+  leaseExpiresAt?: Date
+  processedAt?: Date
+  lastError?: string
+  attemptCount: number
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface ClaimWebhookInput {
+  externalId: string
+  claimToken: string
+  claimedAtMs: number
+  leaseExpiresAtMs: number
+}
+
+export type WebhookClaimResult =
+  | { status: 'claimed'; execution: WebhookExecution }
+  | { status: 'processed'; execution: WebhookExecution }
+  | { status: 'processing'; execution: WebhookExecution }
+
+export interface CreateRecordMutation {
+  type: 'create'
+  objectSlug: string
+  id: string
+  attributes: Record<string, unknown>
+  createdAtMs: number
+}
+
 export interface UpdateRecordMutation {
   type: 'update'
   objectSlug: string
@@ -60,6 +91,7 @@ export interface CleanupRecordRefsMutation {
 }
 
 export type RecordMutation =
+  | CreateRecordMutation
   | UpdateRecordMutation
   | DeleteRecordMutation
   | CleanupRecordRefsMutation
@@ -155,6 +187,14 @@ export interface StorageAdapter {
   cleanupRecordRefs?(objectSlug: string, id: string): Promise<void>
   /** Apply multiple record mutations atomically when the adapter supports it */
   commitRecordMutations?(mutations: RecordMutation[]): Promise<void>
+  /** Claim a webhook execution key so only one handler runs at a time */
+  claimWebhook?(input: ClaimWebhookInput): Promise<WebhookClaimResult>
+  /** Mark a claimed webhook execution as processed */
+  completeWebhook?(externalId: string, claimToken: string, processedAtMs: number): Promise<void>
+  /** Release a claim after a handler error so the webhook can be retried */
+  failWebhook?(externalId: string, claimToken: string, failedAtMs: number, errorMessage: string): Promise<void>
+  /** Delete processed webhook entries older than the provided timestamp */
+  cleanupWebhooks?(processedBeforeMs: number): Promise<void>
   // Relationships
   createRelationship(input: CreateRelationshipInput): Promise<Relationship>
   listRelationships(ref?: { object: string; id: string }, options?: ListRelationshipsOptions): Promise<Relationship[]>

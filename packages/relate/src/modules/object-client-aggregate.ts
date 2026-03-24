@@ -2,8 +2,10 @@ import type { AggregateRecordsOptions, AggregateRecordsResult, StorageAdapter } 
 import type { AttributeSchema, FilterOperator, InferAttributes, ObjectSchema, RelateRecord, SchemaInput } from '../types'
 import { ValidationError } from '../errors'
 
+type FilterFieldValue<T> = undefined extends T ? Exclude<T, undefined> | null : T
+
 export type FilterInput<S extends ObjectSchema> = {
-  [K in keyof InferAttributes<S>]?: InferAttributes<S>[K] | FilterOperator<InferAttributes<S>[K]>
+  [K in keyof InferAttributes<S>]?: FilterFieldValue<InferAttributes<S>[K]> | FilterOperator<InferAttributes<S>[K]>
 }
 
 type NumericAttributeKeys<S extends ObjectSchema> = {

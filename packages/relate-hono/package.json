@@ -1,6 +1,6 @@
 {
   "name": "@nokto-labs/relate-hono",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Hono REST API routes for @nokto-labs/relate.",
   "type": "module",
   "license": "MIT",

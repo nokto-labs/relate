@@ -62,6 +62,17 @@ describe('D1 Queries', () => {
     expect((results[0] as any).stage).toBe('lead')
   })
 
+  it('filters null values with direct equality and eq/null operators', async () => {
+    const { db } = await createD1TestDB()
+    await db.person.create({ email: 'missing-name@test.com' })
+    await db.person.create({ email: 'named@test.com', name: 'Alice' })
+
+    expect(await db.person.find({ filter: { name: null } })).toHaveLength(1)
+    expect(await db.person.find({ filter: { name: { eq: null } } })).toHaveLength(1)
+    expect(await db.person.find({ filter: { name: { ne: null } } })).toHaveLength(1)
+    expect(await db.person.find({ filter: { name: { in: [null, 'Alice'] } } })).toHaveLength(2)
+  })
+
   it('filters with like operator', async () => {
     const { db } = await createD1TestDB()
     await db.person.create({ email: 'alice@acme.com', name: 'Alice' })
@@ -83,6 +94,15 @@ describe('D1 Queries', () => {
 
     expect(await db.deal.count({ stage: 'won' })).toBe(2)
     expect(await db.deal.count({ stage: 'lead' })).toBe(1)
+  })
+
+  it('counts null values with eq/null filters', async () => {
+    const { db } = await createD1TestDB()
+    await db.person.create({ email: 'missing-name@test.com' })
+    await db.person.create({ email: 'named@test.com', name: 'Alice' })
+
+    expect(await db.person.count({ name: { eq: null } })).toBe(1)
+    expect(await db.person.count({ name: { ne: null } })).toBe(1)
   })
 
   it('filters boolean fields correctly', async () => {
@@ -122,6 +142,16 @@ describe('D1 Queries', () => {
 
     expect(warn).not.toHaveBeenCalled()
     warn.mockRestore()
+  })
+
+  it('aggregates with null filters natively', async () => {
+    const { db } = await createD1TestDB()
+    await db.deal.create({ title: 'Missing value' })
+    await db.deal.create({ title: 'Has value', value: 250 })
+
+    expect(await db.deal.aggregate({ filter: { value: { eq: null } }, count: true })).toEqual({
+      count: 1,
+    })
   })
 
   it('aggregates grouped counts natively without warning', async () => {

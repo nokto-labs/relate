@@ -196,6 +196,20 @@ describe('ObjectClient', () => {
   })
 
   describe('aggregate', () => {
+    it('supports null filters in the JavaScript aggregate fallback', async () => {
+      const { db } = createTestDB()
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      await db.deal.create({ title: 'Missing value' })
+      await db.deal.create({ title: 'Has value', value: 250 })
+
+      expect(await db.deal.aggregate({ filter: { value: { eq: null } }, count: true })).toEqual({
+        count: 1,
+      })
+
+      warn.mockRestore()
+    })
+
     it('falls back to JavaScript aggregates and warns', async () => {
       const { db } = createTestDB()
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})

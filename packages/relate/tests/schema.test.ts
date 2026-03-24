@@ -57,6 +57,36 @@ describe('schema validation', () => {
     ).toThrow(InvalidSchemaError)
   })
 
+  it('allows "transaction" as an object slug now that it is not a public method', () => {
+    expect(() =>
+      relate({
+        adapter: createMockAdapter(),
+        schema: defineSchema({
+          objects: {
+            transaction: {
+              attributes: { name: 'text' },
+            },
+          },
+        }),
+      }),
+    ).not.toThrow()
+  })
+
+  it('rejects "webhook" as an object slug because it is a public helper', () => {
+    expect(() =>
+      relate({
+        adapter: createMockAdapter(),
+        schema: defineSchema({
+          objects: {
+            webhook: {
+              attributes: { name: 'text' },
+            },
+          },
+        }),
+      }),
+    ).toThrow(InvalidSchemaError)
+  })
+
   it('rejects relationships that point at missing objects', () => {
     expect(() =>
       relate({

@@ -42,7 +42,7 @@ async function getDB(): Promise<D1Database> {
   return db
 }
 
-const TABLES = ['relate_person', 'relate_deal', 'relate_relationships', 'relate_activities', 'relate_lists', 'relate_list_items', 'relate_migrations']
+const TABLES = ['relate_person', 'relate_deal', 'relate_relationships', 'relate_activities', 'relate_lists', 'relate_list_items', 'relate_migrations', 'relate_webhooks']
 
 export async function resetDB() {
   const d1 = await getDB()

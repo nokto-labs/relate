@@ -208,6 +208,7 @@ GET /people?name[like]=Ali%
 - `in` values are comma-separated in the query string
 - Reserved query params are `limit`, `offset`, `orderBy`, `order`, and `cursor`
 - The same filter syntax works on record list routes and record count routes
+- The route layer currently parses string, number, boolean, and date query values; typed SDK-only null filters such as `{ paymentId: { eq: null } }` should still be done through direct `db.*` calls
 
 ## Cursor pagination
 
@@ -323,6 +324,7 @@ Relate SDK errors are mapped to HTTP responses automatically.
 - Nested ref routes only exist for ref fields
 - Use flat `PATCH` and `DELETE` routes for child records even when nested create/list routes exist
 - Scope object keys use schema object slugs, not plural route names
+- Aggregate queries, `db.batch()`, and `db.webhook()` live on the Relate instance you return from the `db` factory, even though `relateRoutes()` only generates HTTP routes for the route groups documented above
 
 ## Companion packages
 

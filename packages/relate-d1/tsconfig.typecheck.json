@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@nokto-labs/relate": ["../relate/src/index.ts"]
+    },
+    "rootDir": ".."
+  }
+}

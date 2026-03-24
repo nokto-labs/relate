@@ -78,14 +78,17 @@ export type InferAttributes<S extends ObjectSchema> = {
 
 // ─── Filter operators ────────────────────────────────────────────────────────
 
+type FilterEqualityValue<T> = undefined extends T ? Exclude<T, undefined> | null : T
+type FilterRangeValue<T> = Exclude<FilterEqualityValue<T>, null>
+
 export type FilterOperator<T = unknown> = {
-  eq?: T
-  ne?: T
-  gt?: T
-  gte?: T
-  lt?: T
-  lte?: T
-  in?: T[]
+  eq?: FilterEqualityValue<T>
+  ne?: FilterEqualityValue<T>
+  gt?: FilterRangeValue<T>
+  gte?: FilterRangeValue<T>
+  lt?: FilterRangeValue<T>
+  lte?: FilterRangeValue<T>
+  in?: FilterEqualityValue<T>[]
   like?: string
 }
 

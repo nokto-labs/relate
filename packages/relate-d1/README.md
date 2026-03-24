@@ -71,6 +71,7 @@ Call `await makeDb(env).migrate()` during setup or before your first write.
 | `relate_lists` | List definitions |
 | `relate_list_items` | Static list membership |
 | `relate_migrations` | Applied migration tracking |
+| `relate_webhooks` | Built-in webhook claim, retry, and processed state |
 
 When you add a new attribute to a schema, `migrate()` adds the corresponding column automatically.
 
@@ -102,6 +103,63 @@ The D1 adapter supports the stronger ref mutation path:
 
 That means ref cascades are atomic on D1.
 
+## Atomic batch writes on D1
+
+D1 also powers `db.batch()` for the common case of "queue these writes and commit them together":
+
+```typescript
+const result = await db.batch((b) => {
+  const price = b.price.create({ name: 'VIP', amountCents: 3200 })
+  b.ticket.create({ price: price.id, paymentStatus: 'confirmed' })
+  return { priceId: price.id }
+})
+```
+
+Notes:
+
+- Relate lowers the queued writes into prepared statements and sends them through one D1 `batch()` call
+- hooks fire only after the batch commits successfully
+- v1 supports `create()` and `update()`
+- the callback is synchronous, so there are no reads or branches on database state inside the builder
+
+This is the D1-safe subset of a transaction. Read-then-write guards such as stock checks still require raw conditional SQL until the Workers binding exposes a stronger primitive.
+
+## Webhook helpers on D1
+
+D1 also backs `db.webhook()` and `db.cleanupWebhooks()` through the built-in `relate_webhooks` table:
+
+```typescript
+const result = await db.webhook('stripe:evt_123', async () => {
+  await db.person.upsert({ email: 'alice@example.com' })
+  return 'processed'
+})
+```
+
+Notes:
+
+- the first caller claims the webhook key and runs the handler
+- already processed keys are skipped
+- failures clear the claim and record `last_error` so a later retry can run
+- if a handler outlives its lease, another caller can reclaim the key and the original completion update will be ignored
+- `db.cleanupWebhooks()` deletes processed rows older than the default retention window, or an explicit cutoff you pass in
+
+This gives you built-in dedup and retry bookkeeping, but it is still not an exact-once transaction across crashes. If your handler can partially succeed before the processed marker is written, keep those writes idempotent too.
+
+## Null filters on D1
+
+D1 compiles optional-field null filters to real SQL null predicates instead of `= NULL`:
+
+```typescript
+await db.order.count({ paymentId: { eq: null } })
+await db.order.find({ filter: { paymentId: { in: [null, 'pay_123'] } } })
+```
+
+Notes:
+
+- `field: null` and `{ field: { eq: null } }` compile to `IS NULL`
+- `{ field: { ne: null } }` compiles to `IS NOT NULL`
+- `in: [null, ...]` expands into a null-aware SQL clause
+
 ## Aggregate queries on D1
 
 D1 implements Relate aggregates natively with SQL `COUNT(*)`, `SUM(...)`, `GROUP BY`, and one-hop ref joins for aggregate sums.
@@ -130,6 +188,7 @@ That means D1 avoids the JavaScript fallback path for:
 - direct count/sum aggregates
 - grouped count + sum aggregates
 - one-hop ref sums such as `price.amountCents`
+- one-hop ref sums still work when the joined ref is optional, because D1 uses a `LEFT JOIN`
 
 ## Tracked migrations
 
@@ -192,7 +251,8 @@ export default app
 - Call `migrate()` during startup or through a setup route before writing records
 - `migrate()` is additive; renames and drops belong in `applyMigrations()`
 - The adapter stores schema metadata in memory through `setSchema()` so reads and writes work before the next migration run
-- Relate stays D1-first here: it uses atomic `batch()` operations for ref mutation plans instead of exposing a general callback transaction API that D1 cannot support safely today
+- Relate stays D1-first here: it uses atomic `batch()` operations for ref mutation plans and `db.batch()` write sets, while `db.webhook()` adds honest claim/retry bookkeeping instead of pretending D1 has a full exact-once transaction primitive
+- D1 is the reference implementation for `db.batch()`, native aggregates, and the built-in webhook claim table
 
 ## Companion packages
 

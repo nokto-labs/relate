@@ -23,6 +23,6 @@ import type { SchemaDefinition } from './types'
  *   },
  * })
  */
-export function defineSchema<T extends SchemaDefinition>(schema: T): T {
+export function defineSchema<const T extends SchemaDefinition>(schema: T): T {
   return schema
 }

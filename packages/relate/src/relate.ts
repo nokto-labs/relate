@@ -1,14 +1,18 @@
 import type { StorageAdapter, Migration } from './adapter'
 import type { SchemaDefinition, SchemaInput, ObjectSchema } from './types'
 import type { EventHandler, CreatedEvent, UpdatedEvent, DeletedEvent } from './events'
+import type { BatchBuilder } from './modules/batch'
+import type { WebhookOptions, WebhookResult } from './modules/webhook'
 import { ObjectClient } from './modules/object-client'
 import { RelationshipsClient } from './modules/relationships'
 import { ActivitiesClient } from './modules/activities'
 import { ListsClient } from './modules/lists'
+import { executeBatch } from './modules/batch'
+import { cleanupWebhooks, executeWebhook } from './modules/webhook'
 import { EventBus } from './events'
 import { validateSchema } from './schema-validation'
 
-type ReservedKeys = 'migrate' | 'applyMigrations' | 'relationships' | 'activities' | 'lists' | 'on' | 'off'
+type ReservedKeys = 'migrate' | 'applyMigrations' | 'batch' | 'webhook' | 'cleanupWebhooks' | 'relationships' | 'activities' | 'lists' | 'on' | 'off'
 type ObjectKeys<T extends SchemaInput> = Exclude<keyof T, ReservedKeys>
 type ObjectClients<T extends SchemaInput> = { [K in ObjectKeys<T>]: ObjectClient<Extract<T[K], ObjectSchema>, T> }
 
@@ -23,6 +27,9 @@ type EventPayloadFor<_T extends SchemaInput, E extends string> =
 export type Relate<T extends SchemaInput> = {
   migrate(): Promise<void>
   applyMigrations(migrations: Migration[]): Promise<void>
+  batch<R>(builder: (batch: BatchBuilder<T>) => R): Promise<R>
+  webhook<R>(externalId: string, handler: () => Promise<R> | R, options?: WebhookOptions): Promise<WebhookResult<R>>
+  cleanupWebhooks(before?: Date): Promise<void>
   relationships: RelationshipsClient<T>
   activities: ActivitiesClient<T>
   lists: ListsClient<T>
@@ -67,6 +74,11 @@ export function relate<T extends SchemaDefinition>(config: {
       }
       return adapter.applyMigrations(migrations)
     },
+    batch: <R>(builder: (batch: BatchBuilder<T['objects']>) => R) =>
+      executeBatch(adapter, objects, events, () => instance, builder),
+    webhook: <R>(externalId: string, handler: () => Promise<R> | R, options?: WebhookOptions) =>
+      executeWebhook(adapter, externalId, handler, options),
+    cleanupWebhooks: (before?: Date) => cleanupWebhooks(adapter, before),
     relationships: new RelationshipsClient<T['objects']>(adapter, schema),
     activities: new ActivitiesClient<T['objects']>(adapter, objects),
     lists: new ListsClient<T['objects']>(adapter, objects),

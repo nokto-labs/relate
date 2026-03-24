@@ -150,7 +150,7 @@ export class ObjectClient<S extends ObjectSchema, FullSchema extends SchemaInput
           changes: event.changes,
           db: this.dbRef?.(),
         })
-      } else {
+      } else if (event.type === 'deleted') {
         await this.events?.emit(`${event.objectSlug}.deleted`, { id: event.id, db: this.dbRef?.() })
       }
     }

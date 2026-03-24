@@ -14,6 +14,15 @@ interface PlannedUpdateMutation {
   record: RelateRecord
 }
 
+interface PlannedCreateMutation {
+  type: 'create'
+  objectSlug: string
+  id: string
+  attributes: Record<string, unknown>
+  createdAtMs: number
+  record: RelateRecord
+}
+
 interface PlannedDeleteMutation {
   type: 'delete'
   objectSlug: string
@@ -27,11 +36,13 @@ interface PlannedCleanupMutation {
 }
 
 export type PlannedRecordMutation =
+  | PlannedCreateMutation
   | PlannedUpdateMutation
   | PlannedDeleteMutation
   | PlannedCleanupMutation
 
 export type PlannedRecordEvent =
+  | { type: 'created'; objectSlug: string; record: RelateRecord }
   | { type: 'updated'; objectSlug: string; record: RelateRecord; changes: Record<string, unknown> }
   | { type: 'deleted'; objectSlug: string; id: string }
 
@@ -40,11 +51,16 @@ export async function validateRefs(
   schema: SchemaInput,
   objectSlug: string,
   attributes: Record<string, unknown>,
+  options: {
+    resolveRecord?: (objectSlug: string, id: string) => Promise<RelateRecord | null>
+  } = {},
 ): Promise<void> {
   const objectSchema = schema[objectSlug]
   if (!objectSchema) return
 
   const checks: Promise<void>[] = []
+  const resolveRecord = options.resolveRecord ?? ((targetObjectSlug: string, id: string) =>
+    adapter.getRecord(targetObjectSlug, id))
 
   for (const [attrName, attrSchema] of Object.entries(objectSchema.attributes)) {
     if (!isRefAttribute(attrSchema)) continue
@@ -54,7 +70,7 @@ export async function validateRefs(
     if (value === undefined || value === null) continue
 
     checks.push(
-      adapter.getRecord(attrSchema.object, value as string).then((record) => {
+      resolveRecord(attrSchema.object, value as string).then((record) => {
         if (!record) {
           throw new RefNotFoundError({ object: attrSchema.object, field: attrName, id: value as string })
         }
@@ -157,7 +173,7 @@ export async function planRecordDelete(
 }
 
 function toRecordMutation(mutation: PlannedRecordMutation): RecordMutation {
-  if (mutation.type === 'update') {
+  if (mutation.type === 'create' || mutation.type === 'update') {
     const { record: _record, ...rest } = mutation
     return rest
   }
@@ -169,7 +185,13 @@ function toEvents(plan: PlannedRecordMutation[]): PlannedRecordEvent[] {
   const events: PlannedRecordEvent[] = []
 
   for (const mutation of plan) {
-    if (mutation.type === 'update') {
+    if (mutation.type === 'create') {
+      events.push({
+        type: 'created',
+        objectSlug: mutation.objectSlug,
+        record: mutation.record,
+      })
+    } else if (mutation.type === 'update') {
       events.push({
         type: 'updated',
         objectSlug: mutation.objectSlug,
@@ -190,9 +212,15 @@ export async function applyRecordMutationPlan(
 ): Promise<PlannedRecordEvent[]> {
   if (plan.length === 0) return []
 
+  const requiresAtomicCreate = plan.some((mutation) => mutation.type === 'create')
+
   if (adapter.commitRecordMutations) {
     await adapter.commitRecordMutations(plan.map(toRecordMutation))
     return toEvents(plan)
+  }
+
+  if (requiresAtomicCreate) {
+    throw new Error('This adapter does not support batch writes')
   }
 
   const events: PlannedRecordEvent[] = []

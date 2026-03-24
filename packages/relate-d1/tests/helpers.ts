@@ -72,7 +72,7 @@ async function getDB(): Promise<D1Database> {
 const ALL_TABLES = [
   'relate_person', 'relate_company', 'relate_deal', 'relate_price', 'relate_ticket',
   'relate_relationships', 'relate_activities',
-  'relate_lists', 'relate_list_items', 'relate_migrations',
+  'relate_lists', 'relate_list_items', 'relate_migrations', 'relate_webhooks',
 ]
 
 /** Wipe all data between tests */

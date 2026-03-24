@@ -78,6 +78,10 @@ export default app
 
 - Typed object clients with `create`, `upsert`, `get`, `find`, `findPage`, `count`, `aggregate`, `update`, and `delete`
 - `ref` attributes with `restrict`, `cascade`, `set_null`, and `none` delete behavior
+- Null-aware typed filters for optional attributes
+- Atomic `db.batch()` writes for queued record creates and updates
+- Built-in `db.webhook()` dedup and retry state for webhook handlers
+- One-hop aggregate sums such as `price.amountCents` on native adapters
 - First-class relationships between any records
 - Immutable activity timelines
 - Static and dynamic lists
