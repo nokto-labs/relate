@@ -1,8 +1,9 @@
-import type { StorageAdapter, CreateRelationshipInput, TrackActivityInput, FindRecordsOptions, ListActivitiesOptions, ListRelationshipsOptions, PaginatedResult, UpsertResult, Migration, CreateListInput, ListListsOptions, ListItemsOptions, RelateRecord, RelateList, Relationship, Activity, SchemaInput, ObjectSchema } from '@nokto-labs/relate'
+import type { StorageAdapter, CreateRelationshipInput, TrackActivityInput, FindRecordsOptions, ListActivitiesOptions, ListRelationshipsOptions, PaginatedResult, UpsertResult, Migration, CreateListInput, ListListsOptions, ListItemsOptions, RelateRecord, RelateList, Relationship, Activity, SchemaInput, ObjectSchema, AggregateRecordsOptions, AggregateRecordsResult } from '@nokto-labs/relate'
 import type { D1Database, D1PreparedStatement } from './d1-types'
 import { migrate, applyMigrations } from './migrations'
 import { createRecord, upsertRecord, getRecord, updateRecord, updateRecordStatement, deleteRecord, deleteRecordStatement } from './records/crud'
 import { findRecords, findRecordsPage, countRecords } from './records/queries'
+import { aggregateRecords } from './records/aggregate'
 import * as relationships from './relationships'
 import * as activities from './activities'
 import { createList, getList, listLists, updateList, deleteList } from './lists/crud'
@@ -62,6 +63,10 @@ export class D1Adapter implements StorageAdapter {
     return countRecords(this.db, objectSlug, this.objectSchema(objectSlug), filter)
   }
 
+  aggregateRecords(objectSlug: string, options: AggregateRecordsOptions): Promise<AggregateRecordsResult> {
+    return aggregateRecords(this.db, objectSlug, this.objectSchema(objectSlug), options)
+  }
+
   updateRecord(objectSlug: string, id: string, attrs: Record<string, unknown>): Promise<RelateRecord> {
     return updateRecord(this.db, objectSlug, this.objectSchema(objectSlug), id, attrs)
   }
@@ -77,6 +82,12 @@ export class D1Adapter implements StorageAdapter {
   async commitRecordMutations(mutations: D1RecordMutation[]): Promise<void> {
     if (mutations.length === 0) return
     await this.db.batch(mutations.flatMap((mutation) => this.mutationStatements(mutation)))
+  }
+
+  async transaction<T>(_run: (adapter: StorageAdapter) => Promise<T>): Promise<T> {
+    throw new Error(
+      'D1Adapter does not support interactive transactions yet. Cloudflare D1 exposes atomic batch() calls, but not read-then-write callback transactions through the Workers binding.',
+    )
   }
 
   private mutationStatements(mutation: D1RecordMutation): D1PreparedStatement[] {

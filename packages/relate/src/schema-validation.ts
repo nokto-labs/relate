@@ -6,7 +6,7 @@ export function isRefAttribute(schema: unknown): schema is RefAttributeSchema {
 }
 
 const SAFE_IDENTIFIER = /^[a-z][a-z0-9_]*$/
-const RESERVED_OBJECT_KEYS = new Set(['migrate', 'applyMigrations', 'relationships', 'activities', 'lists', 'on', 'off'])
+const RESERVED_OBJECT_KEYS = new Set(['migrate', 'applyMigrations', 'transaction', 'relationships', 'activities', 'lists', 'on', 'off'])
 
 function isSelectAttribute(schema: AttributeSchema): schema is Extract<AttributeSchema, { type: 'select' }> {
   return typeof schema === 'object' && schema !== null && 'type' in schema && schema.type === 'select'

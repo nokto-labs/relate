@@ -1,16 +1,24 @@
 export { relate } from './relate'
 export { defineSchema } from './schema'
 export { EventBus } from './events'
+export { FILTER_OPERATORS, isFilterOperatorObject, matchesFilter, mergeFilters } from './filters'
 export { RelateError, NotFoundError, DuplicateError, ValidationError, RefNotFoundError, RefConstraintError, CascadeDepthError, InvalidSchemaError } from './errors'
 export type { ErrorCode, ErrorDetail } from './errors'
 
 export type { Relate } from './relate'
+export type {
+  TransactionRelate,
+  TransactionRecordClient,
+} from './relate'
 export type {
   StorageAdapter,
   CreateRelationshipInput,
   TrackActivityInput,
   ListActivitiesOptions,
   FindRecordsOptions,
+  AggregateRecordsOptions,
+  AggregateRecordsResult,
+  SumAggregateInput,
   ListRelationshipsOptions,
   PaginatedResult,
   UpsertResult,

@@ -194,4 +194,93 @@ describe('ObjectClient', () => {
       expect(updated?.name).toBe('Hooked')
     })
   })
+
+  describe('aggregate', () => {
+    it('falls back to JavaScript aggregates and warns', async () => {
+      const { db } = createTestDB()
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      await db.deal.create({ title: 'A', value: 100 })
+      await db.deal.create({ title: 'B', value: 250 })
+
+      expect(await db.deal.aggregate({ count: true, sum: { field: 'value' } })).toEqual({
+        count: 2,
+        sum: 350,
+      })
+
+      expect(warn).toHaveBeenCalledTimes(1)
+      expect(warn.mock.calls[0][0]).toContain('Falling back to JavaScript aggregate')
+      warn.mockRestore()
+    })
+
+    it('groups counts by field', async () => {
+      const { db } = createTestDB()
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      await db.person.create({ email: 'vip-1@test.com', tier: 'vip' })
+      await db.person.create({ email: 'vip-2@test.com', tier: 'vip' })
+      await db.person.create({ email: 'trial@test.com', tier: 'trial' })
+
+      expect(await db.person.aggregate({ count: true, groupBy: 'tier' })).toEqual({
+        groups: {
+          vip: 2,
+          trial: 1,
+        },
+      })
+
+      warn.mockRestore()
+    })
+  })
+
+  describe('transaction', () => {
+    it('commits record operations on success', async () => {
+      const { db } = createTestDB()
+
+      const id = await db.transaction(async (tx) => {
+        const person = await tx.person.create({ email: 'alice@test.com', name: 'Alice' })
+        await tx.person.update(person.id, { name: 'Alicia' })
+        return person.id
+      })
+
+      const stored = await db.person.get(id)
+      expect(stored?.name).toBe('Alicia')
+    })
+
+    it('supports upsert inside a transaction', async () => {
+      const { db } = createTestDB()
+
+      await db.transaction(async (tx) => {
+        await tx.person.upsert({ email: 'alice@test.com', name: 'Alice' })
+        await tx.person.upsert({ email: 'alice@test.com', name: 'Alicia' })
+      })
+
+      const stored = await db.person.find()
+      expect(stored).toHaveLength(1)
+      expect(stored[0].name).toBe('Alicia')
+    })
+
+    it('rolls back record operations on failure', async () => {
+      const { db } = createTestDB()
+
+      await expect(db.transaction(async (tx) => {
+        await tx.person.create({ email: 'rolled-back@test.com' })
+        throw new Error('stop')
+      })).rejects.toThrow('stop')
+
+      expect(await db.person.find()).toEqual([])
+    })
+
+    it('emits queued events only after commit', async () => {
+      const { db, events } = createTestDB()
+      const created = vi.fn()
+      events.on('person.created', created)
+
+      await db.transaction(async (tx) => {
+        await tx.person.create({ email: 'queued@test.com' })
+        expect(created).not.toHaveBeenCalled()
+      })
+
+      expect(created).toHaveBeenCalledTimes(1)
+    })
+  })
 })

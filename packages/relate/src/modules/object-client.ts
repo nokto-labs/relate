@@ -1,13 +1,10 @@
 import type { StorageAdapter, PaginatedResult } from '../adapter'
-import type { RelateRecord, ObjectSchema, SchemaInput, InferAttributes, FilterOperator } from '../types'
+import type { RelateRecord, ObjectSchema, SchemaInput, InferAttributes } from '../types'
 import type { EventBus } from '../events'
 import { DuplicateError, ValidationError, NotFoundError } from '../errors'
 import { validateAttributes } from '../validation'
 import { validateRefs, planRecordDelete, applyRecordMutationPlan } from '../ref-integrity'
-
-type FilterInput<S extends ObjectSchema> = {
-  [K in keyof InferAttributes<S>]?: InferAttributes<S>[K] | FilterOperator<InferAttributes<S>[K]>
-}
+import { aggregateObjectRecords, type AggregateInput, type FilterInput } from './object-client-aggregate'
 
 export class ObjectClient<S extends ObjectSchema> {
   constructor(
@@ -111,6 +108,10 @@ export class ObjectClient<S extends ObjectSchema> {
 
   async count(filter?: FilterInput<S>): Promise<number> {
     return this.adapter.countRecords(this.slug, filter as Record<string, unknown> | undefined)
+  }
+
+  async aggregate(options: AggregateInput<S>) {
+    return aggregateObjectRecords(this.adapter, this.slug, this.schema, options)
   }
 
   async update(id: string, attributes: Partial<InferAttributes<S>>): Promise<RelateRecord<S>> {

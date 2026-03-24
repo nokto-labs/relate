@@ -44,6 +44,7 @@ export default app
 ## What it generates
 
 - record CRUD routes
+- optional scoped record mounts for public/admin APIs
 - nested ref routes
 - relationships routes
 - activities routes
@@ -75,6 +76,44 @@ Record, relationship, activity, and list routes are enabled by default. Meta rou
 - filter params that map to Relate filter operators
 
 `GET /:plural/count` accepts the same filter params as `GET /:plural`.
+
+## Scoped record routes
+
+Use `scopes` when you want multiple record surfaces, such as a public read-only API plus an admin CRUD API.
+
+```typescript
+relateRoutes({
+  schema,
+  db: (c) => relate({ ... }),
+  scopes: {
+    public: {
+      prefix: '/api',
+      objects: {
+        deal: {
+          operations: ['list', 'get'],
+          filter: { stage: { ne: 'closed_lost' } },
+        },
+      },
+    },
+    admin: {
+      prefix: '/api/admin',
+      middleware: [adminAuth],
+      objects: 'all',
+    },
+  },
+})
+```
+
+### Scope notes
+
+- v1 scopes apply to record routes only
+- Scoped record routes must cover every schema object, or app creation fails
+- If `scopes` is provided, Relate does not mount the default root record routes
+- `filter` is enforced on scoped `list`, `count`, and `get` routes
+- `filter` is also enforced before scoped `update` and `delete`
+- Scoped `filter` values are merged with request filters, so enforced operators still apply
+- `middleware` runs only for that scope
+- Relationships, activities, lists, schema, and migrate routes still use the top-level `routes` toggles
 
 ## Nested ref routes
 
@@ -240,6 +279,12 @@ relateRoutes({
   db: (c) => relate({ ... }),
   prefix: '/api/v1',
   middleware: [auth],
+  scopes: {
+    admin: {
+      prefix: '/api/admin',
+      objects: 'all',
+    },
+  },
   maxLimit: 100,
   routes: { lists: false, schema: true, migrate: true },
 })
@@ -251,6 +296,7 @@ relateRoutes({
 | `db` | Factory that returns a Relate instance per request |
 | `prefix` | Prefix all generated routes |
 | `middleware` | Hono middleware to run before routes |
+| `scopes` | Mount scoped record route surfaces with their own prefixes, middleware, and object policies |
 | `maxLimit` | Cap `?limit=` values |
 | `routes` | Enable or disable route groups |
 
@@ -276,6 +322,7 @@ Relate SDK errors are mapped to HTTP responses automatically.
 - If you want hooks during API requests, create an `EventBus` in your app and pass it into `relate()` inside the `db` factory
 - Nested ref routes only exist for ref fields
 - Use flat `PATCH` and `DELETE` routes for child records even when nested create/list routes exist
+- Scope object keys use schema object slugs, not plural route names
 
 ## Companion packages
 

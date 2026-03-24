@@ -8,10 +8,15 @@ import { listRoutes } from './routes/lists'
 import { recordRoutes } from './routes/records'
 import { schemaRoutes } from './routes/schema'
 import { validateMaxLimit } from './limits'
+import {
+  applyMiddleware,
+  normalizeRecordScopes,
+  type MiddlewareFn,
+  type RecordRouteScopeConfig,
+  type ScopedRecordObjectConfig,
+} from './scopes'
 
 export type { AnyRelate } from './types'
-
-type MiddlewareFn = (c: any, next: () => Promise<void>) => Promise<void | Response>
 
 export interface RouteToggles {
   schema?: boolean
@@ -22,12 +27,15 @@ export interface RouteToggles {
   lists?: boolean
 }
 
+export type { ScopedRecordObjectConfig, RecordRouteScopeConfig }
+
 export interface RelateRoutesConfig<E extends object> {
   schema: SchemaDefinition
   db: (c: { env: E }) => AnyRelate
   prefix?: string
   middleware?: MiddlewareFn | MiddlewareFn[]
   routes?: RouteToggles
+  scopes?: Record<string, RecordRouteScopeConfig>
   maxLimit?: number
 }
 
@@ -54,6 +62,7 @@ export function relateRoutes<E extends object = Record<string, unknown>>(
     }
     return toggles?.[key] !== false
   }
+  const recordScopes = enabled('records') ? normalizeRecordScopes(schema, config.scopes) : []
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const app = new Hono<any>()
@@ -72,12 +81,7 @@ export function relateRoutes<E extends object = Record<string, unknown>>(
   })
 
   // User-provided middleware (auth, logging, etc.)
-  if (middleware) {
-    const fns = Array.isArray(middleware) ? middleware : [middleware]
-    for (const fn of fns) {
-      app.use('*', fn)
-    }
-  }
+  applyMiddleware(app, middleware)
 
   // Relate instance per request
   app.use('*', async (c, next) => {
@@ -93,9 +97,20 @@ export function relateRoutes<E extends object = Record<string, unknown>>(
   if (enabled('relationships')) r.route('/', relationshipRoutes(pluralToSlug))
   if (enabled('activities')) r.route('/', activityRoutes(pluralToSlug))
   if (enabled('lists')) r.route('/', listRoutes(objects))
-  if (enabled('records')) r.route('/', recordRoutes(objects, pluralToSlug))
+  if (enabled('records') && recordScopes.length === 0) {
+    r.route('/', recordRoutes(objects, pluralToSlug))
+  }
 
   app.route(prefix ?? '/', r as any)
+
+  if (enabled('records')) {
+    for (const scope of recordScopes) {
+      const scoped = new Hono<HonoEnv>()
+      applyMiddleware(scoped, scope.middleware)
+      scoped.route('/', recordRoutes(objects, pluralToSlug, scope.policies))
+      app.route(scope.prefix ?? '/', scoped as any)
+    }
+  }
 
   return app as Hono<{ Bindings: E }>
 }

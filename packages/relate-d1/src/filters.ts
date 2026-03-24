@@ -1,8 +1,8 @@
 import type { ObjectSchema } from '@nokto-labs/relate'
-import { ValidationError } from '@nokto-labs/relate'
+import { FILTER_OPERATORS, ValidationError } from '@nokto-labs/relate'
 import { assertSafeKey, filterValueToSql } from './utils'
 
-const VALID_OPS = new Set(['eq', 'ne', 'gt', 'gte', 'lt', 'lte', 'in', 'like'])
+const VALID_OPS = new Set<string>(FILTER_OPERATORS)
 const OP_TO_SQL: Record<string, string> = {
   eq: '=',
   ne: '!=',
@@ -19,6 +19,9 @@ export function parseFilterClauses(
   bindings: unknown[],
   objectSchema?: ObjectSchema,
 ): void {
+  // Keep SQL compilation aligned with the shared runtime matcher in
+  // `packages/relate/src/filters.ts`, which powers non-SQL checks such as
+  // scoped Hono `get/update/delete` route filtering.
   for (const [key, value] of Object.entries(filter)) {
     assertSafeKey(key)
     const attrSchema = objectSchema?.attributes[key]

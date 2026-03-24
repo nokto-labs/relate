@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterAll } from 'vitest'
+import { describe, it, expect, beforeEach, afterAll, vi } from 'vitest'
 import { createD1TestDB, resetDB, cleanup } from './helpers'
 
 beforeEach(resetDB)
@@ -106,6 +106,41 @@ describe('D1 Queries', () => {
 
     expect(results).toHaveLength(1)
     expect(results[0].email).toBe('late@test.com')
+  })
+
+  it('aggregates count and sum natively without warning', async () => {
+    const { db } = await createD1TestDB()
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    await db.deal.create({ title: 'A', value: 100 })
+    await db.deal.create({ title: 'B', value: 250 })
+
+    expect(await db.deal.aggregate({ count: true, sum: { field: 'value' } })).toEqual({
+      count: 2,
+      sum: 350,
+    })
+
+    expect(warn).not.toHaveBeenCalled()
+    warn.mockRestore()
+  })
+
+  it('aggregates grouped counts natively without warning', async () => {
+    const { db } = await createD1TestDB()
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    await db.deal.create({ title: 'A', stage: 'won' })
+    await db.deal.create({ title: 'B', stage: 'won' })
+    await db.deal.create({ title: 'C', stage: 'lead' })
+
+    expect(await db.deal.aggregate({ count: true, groupBy: 'stage' })).toEqual({
+      groups: {
+        lead: 1,
+        won: 2,
+      },
+    })
+
+    expect(warn).not.toHaveBeenCalled()
+    warn.mockRestore()
   })
 
   // ─── Ordering ──────────────────────────────────────────────────────
@@ -242,5 +277,13 @@ describe('D1 Queries', () => {
     const page = await db.deal.findPage({ filter: { stage: 'nonexistent' } })
     expect(page.records).toEqual([])
     expect(page.nextCursor).toBeUndefined()
+  })
+
+  it('reports interactive transactions as unsupported on D1', async () => {
+    const { db } = await createD1TestDB()
+
+    await expect(db.transaction(async () => 'ok')).rejects.toThrow(
+      'D1Adapter does not support interactive transactions yet',
+    )
   })
 })

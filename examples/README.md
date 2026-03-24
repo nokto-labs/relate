@@ -4,6 +4,8 @@ Cross-package examples for Relate.
 
 Package `README`s are the main reference. The files here are end-to-end walkthroughs.
 
+The package docs cover the current aggregate, transaction, and scoped-route APIs.
+
 ## Available examples
 
 | Example | What it shows |

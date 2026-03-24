@@ -11,6 +11,23 @@ export interface FindRecordsOptions {
   cursor?: string
 }
 
+export interface SumAggregateInput {
+  field: string
+}
+
+export interface AggregateRecordsOptions {
+  filter?: Record<string, unknown>
+  count?: boolean
+  groupBy?: string
+  sum?: SumAggregateInput
+}
+
+export interface AggregateRecordsResult {
+  count?: number
+  sum?: number
+  groups?: Record<string, number>
+}
+
 export interface PaginatedResult<T = RelateRecord> {
   records: T[]
   nextCursor?: string
@@ -130,12 +147,15 @@ export interface StorageAdapter {
   findRecords(objectSlug: string, options?: FindRecordsOptions): Promise<RelateRecord[]>
   findRecordsPage?(objectSlug: string, options?: FindRecordsOptions): Promise<PaginatedResult>
   countRecords(objectSlug: string, filter?: Record<string, unknown>): Promise<number>
+  aggregateRecords?(objectSlug: string, options: AggregateRecordsOptions): Promise<AggregateRecordsResult>
   updateRecord(objectSlug: string, id: string, attributes: Record<string, unknown>): Promise<RelateRecord>
   deleteRecord(objectSlug: string, id: string): Promise<void>
   /** Clean up relationships and list memberships for a deleted record */
   cleanupRecordRefs?(objectSlug: string, id: string): Promise<void>
   /** Apply multiple record mutations atomically when the adapter supports it */
   commitRecordMutations?(mutations: RecordMutation[]): Promise<void>
+  /** Execute record operations inside a transaction when the adapter supports it */
+  transaction?<T>(run: (adapter: StorageAdapter) => Promise<T>): Promise<T>
 
   // Relationships
   createRelationship(input: CreateRelationshipInput): Promise<Relationship>

@@ -71,10 +71,19 @@ export async function cleanup() {
   if (mf) await mf.dispose()
 }
 
-export function req(app: any, method: string, path: string, body?: unknown) {
+export function req(
+  app: any,
+  method: string,
+  path: string,
+  body?: unknown,
+  init?: { headers?: Record<string, string> },
+) {
   return app.request(path, {
     method,
-    headers: body ? { 'Content-Type': 'application/json' } : {},
+    headers: {
+      ...(body ? { 'Content-Type': 'application/json' } : {}),
+      ...(init?.headers ?? {}),
+    },
     body: body ? JSON.stringify(body) : undefined,
   })
 }

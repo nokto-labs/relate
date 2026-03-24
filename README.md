@@ -1,6 +1,6 @@
 # Relate
 
-Define your domain in TypeScript. Get typed records, refs, relationships, activities, lists, hooks, and an optional REST API for Cloudflare.
+Define your domain in TypeScript. Get typed records, refs, relationships, activities, lists, hooks, aggregate queries, and an optional REST API for Cloudflare.
 
 ## What You Can Build
 
@@ -76,7 +76,8 @@ export default app
 
 ## What You Get
 
-- Typed object clients with `create`, `upsert`, `get`, `find`, `findPage`, `count`, `update`, and `delete`
+- Typed object clients with `create`, `upsert`, `get`, `find`, `findPage`, `count`, `aggregate`, `update`, and `delete`
+- Adapter-backed record transactions with `db.transaction()` where the adapter supports them
 - `ref` attributes with `restrict`, `cascade`, `set_null`, and `none` delete behavior
 - First-class relationships between any records
 - Immutable activity timelines
@@ -84,6 +85,7 @@ export default app
 - Event hooks for record lifecycle changes
 - Schema-driven migrations for tables and columns
 - Generated Hono routes for CRUD, refs, relationships, activities, and lists
+- Scoped Hono record routes for public/admin API surfaces
 
 ## Where To Read
 

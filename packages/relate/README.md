@@ -1,6 +1,6 @@
 # `@nokto-labs/relate`
 
-Core SDK for defining your domain in TypeScript and working with typed records, refs, relationships, activities, lists, and hooks.
+Core SDK for defining your domain in TypeScript and working with typed records, refs, relationships, activities, lists, hooks, aggregate queries, and adapter-backed transactions.
 
 ## What You Can Build
 
@@ -112,6 +112,7 @@ await db.relationships.create({
 | `db.lists` | Lists client |
 | `db.migrate()` | Sync schema to storage |
 | `db.applyMigrations(migrations)` | Run tracked custom migrations |
+| `db.transaction(run)` | Run record operations in an adapter-backed transaction when the adapter supports it |
 | `db.on(event, handler)` | Register a lifecycle hook |
 | `db.off(event, handler)` | Remove a lifecycle hook |
 
@@ -125,6 +126,7 @@ await db.relationships.create({
 | `find(options?)` | List records |
 | `findPage(options?)` | Cursor-paginated list |
 | `count(filter?)` | Count matching records |
+| `aggregate(options)` | Count, group, and sum matching records |
 | `update(id, attributes)` | Partially update a record |
 | `delete(id)` | Delete a record |
 
@@ -263,6 +265,63 @@ await db.deal.find({
 | `number` | number |
 | `boolean` | boolean |
 | `date` | `Date` |
+
+## Aggregates
+
+Use `aggregate()` for grouped counts and numeric sums.
+
+```typescript
+const byStage = await db.deal.aggregate({
+  filter: { owner: alice.id },
+  count: true,
+  groupBy: 'stage',
+})
+// { groups: { lead: 3, qualified: 5, closed_won: 2 } }
+
+const pipelineValue = await db.deal.aggregate({
+  filter: { owner: alice.id, stage: { in: ['lead', 'qualified', 'proposal'] } },
+  sum: { field: 'value' },
+})
+// { sum: 125000 }
+```
+
+### Aggregate notes
+
+- v1 supports `count`, `sum`, and `groupBy`
+- `groupBy` requires `count: true`
+- `groupBy` and `sum` cannot be combined in one call in v1
+- `sum.field` must be a direct numeric attribute
+- If an adapter does not implement native aggregates, Relate falls back to a JavaScript implementation, logs a warning, and loads matching records into memory
+
+## Transactions
+
+Use `db.transaction()` when a workflow needs read-then-write safety from the adapter.
+
+```typescript
+await db.transaction(async (tx) => {
+  const openDeals = await tx.deal.count({
+    owner: alice.id,
+    stage: { in: ['lead', 'qualified', 'proposal'] },
+  })
+
+  if (openDeals >= 10) {
+    throw new Error('Owner is at capacity')
+  }
+
+  await tx.deal.create({
+    title: 'Expansion',
+    owner: alice.id,
+  })
+})
+```
+
+### Transaction notes
+
+- v1 exposes record clients only inside `tx`
+- The transaction surface includes `get`, `find`, `count`, `create`, `upsert`, `update`, and `delete`
+- Relationships, activities, and lists stay outside the transaction surface for now
+- Hook events raised inside the transaction are emitted after commit
+- If an adapter does not support transactions, `db.transaction()` throws
 
 ## Pagination
 
