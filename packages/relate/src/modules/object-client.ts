@@ -6,12 +6,12 @@ import { validateAttributes } from '../validation'
 import { validateRefs, planRecordDelete, applyRecordMutationPlan } from '../ref-integrity'
 import { aggregateObjectRecords, type AggregateInput, type FilterInput } from './object-client-aggregate'
 
-export class ObjectClient<S extends ObjectSchema> {
+export class ObjectClient<S extends ObjectSchema, FullSchema extends SchemaInput = SchemaInput> {
   constructor(
     private readonly adapter: StorageAdapter,
     private readonly slug: string,
     private readonly schema: S,
-    private readonly fullSchema: SchemaInput,
+    private readonly fullSchema: FullSchema,
     private readonly events?: EventBus,
     private readonly dbRef?: () => unknown,
   ) {}
@@ -110,8 +110,8 @@ export class ObjectClient<S extends ObjectSchema> {
     return this.adapter.countRecords(this.slug, filter as Record<string, unknown> | undefined)
   }
 
-  async aggregate(options: AggregateInput<S>) {
-    return aggregateObjectRecords(this.adapter, this.slug, this.schema, options)
+  async aggregate(options: AggregateInput<S, FullSchema>) {
+    return aggregateObjectRecords(this.adapter, this.slug, this.schema, this.fullSchema, options)
   }
 
   async update(id: string, attributes: Partial<InferAttributes<S>>): Promise<RelateRecord<S>> {

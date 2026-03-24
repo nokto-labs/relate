@@ -104,7 +104,7 @@ That means ref cascades are atomic on D1.
 
 ## Aggregate queries on D1
 
-D1 implements Relate aggregates natively with SQL `COUNT(*)`, `SUM(...)`, and `GROUP BY`.
+D1 implements Relate aggregates natively with SQL `COUNT(*)`, `SUM(...)`, `GROUP BY`, and one-hop ref joins for aggregate sums.
 
 ```typescript
 const totals = await db.deal.aggregate({
@@ -116,27 +116,20 @@ const value = await db.deal.aggregate({
   filter: { stage: 'won' },
   sum: { field: 'value' },
 })
-```
 
-That means D1 avoids the JavaScript fallback path for aggregate queries.
-
-## Transactions on D1
-
-Relate exposes `db.transaction()` at the core SDK level, but `@nokto-labs/relate-d1` does not currently support interactive callback transactions.
-
-```typescript
-await db.transaction(async (tx) => {
-  // Not supported by the current D1 Workers binding
+const revenueByPrice = await db.ticket.aggregate({
+  filter: { paymentStatus: 'confirmed' },
+  count: true,
+  groupBy: 'price',
+  sum: { field: 'price.amountCents' },
 })
 ```
 
-Why:
+That means D1 avoids the JavaScript fallback path for:
 
-- D1 supports atomic `batch()` execution, which Relate already uses for ref cascade plans
-- The current Workers binding does not expose an interactive read-then-write transaction API for callback-style flows
-- `D1Adapter` therefore throws an explicit error for `db.transaction()` instead of pretending the callback is atomic
-
-Use raw SQL or D1-specific write patterns when you need a truly atomic read-then-write flow today.
+- direct count/sum aggregates
+- grouped count + sum aggregates
+- one-hop ref sums such as `price.amountCents`
 
 ## Tracked migrations
 
@@ -199,7 +192,7 @@ export default app
 - Call `migrate()` during startup or through a setup route before writing records
 - `migrate()` is additive; renames and drops belong in `applyMigrations()`
 - The adapter stores schema metadata in memory through `setSchema()` so reads and writes work before the next migration run
-- Ref cascade plans are atomic on D1, even though interactive `db.transaction()` is not yet supported
+- Relate stays D1-first here: it uses atomic `batch()` operations for ref mutation plans instead of exposing a general callback transaction API that D1 cannot support safely today
 
 ## Companion packages
 

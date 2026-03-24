@@ -11,15 +11,6 @@ export function createMockAdapter(): StorageAdapter & { records: Map<string, Map
     return records.get(slug)!
   }
 
-  function cloneState() {
-    return new Map(
-      [...records.entries()].map(([slug, table]) => [
-        slug,
-        new Map([...table.entries()].map(([id, record]) => [id, { ...record }])),
-      ]),
-    )
-  }
-
   const adapter: StorageAdapter & { records: Map<string, Map<string, Record<string, unknown>>> } = {
     records,
 
@@ -82,19 +73,6 @@ export function createMockAdapter(): StorageAdapter & { records: Map<string, Map
       getTable(slug).delete(id)
     },
 
-    async transaction<T>(run: (adapter: StorageAdapter) => Promise<T>): Promise<T> {
-      const snapshot = cloneState()
-      try {
-        return await run(adapter)
-      } catch (error) {
-        records.clear()
-        for (const [slug, table] of snapshot) {
-          records.set(slug, new Map(table))
-        }
-        throw error
-      }
-    },
-
     async createRelationship() { return {} as any },
     async listRelationships() { return [] },
     async updateRelationship() { return {} as any },
@@ -133,6 +111,19 @@ export const testSchema = defineSchema({
       attributes: {
         title: { type: 'text', required: true },
         value: 'number',
+        stage: { type: 'select', options: ['lead', 'qualified', 'won'] as const },
+      },
+    },
+    price: {
+      attributes: {
+        name: 'text',
+        amountCents: { type: 'number', required: true },
+      },
+    },
+    ticket: {
+      attributes: {
+        price: { type: 'ref', object: 'price', required: true },
+        paymentStatus: { type: 'select', options: ['pending', 'confirmed', 'refunded'] as const },
       },
     },
   },

@@ -64,7 +64,7 @@ export class D1Adapter implements StorageAdapter {
   }
 
   aggregateRecords(objectSlug: string, options: AggregateRecordsOptions): Promise<AggregateRecordsResult> {
-    return aggregateRecords(this.db, objectSlug, this.objectSchema(objectSlug), options)
+    return aggregateRecords(this.db, objectSlug, this.objectSchema(objectSlug), this.schema, options)
   }
 
   updateRecord(objectSlug: string, id: string, attrs: Record<string, unknown>): Promise<RelateRecord> {
@@ -82,12 +82,6 @@ export class D1Adapter implements StorageAdapter {
   async commitRecordMutations(mutations: D1RecordMutation[]): Promise<void> {
     if (mutations.length === 0) return
     await this.db.batch(mutations.flatMap((mutation) => this.mutationStatements(mutation)))
-  }
-
-  async transaction<T>(_run: (adapter: StorageAdapter) => Promise<T>): Promise<T> {
-    throw new Error(
-      'D1Adapter does not support interactive transactions yet. Cloudflare D1 exposes atomic batch() calls, but not read-then-write callback transactions through the Workers binding.',
-    )
   }
 
   private mutationStatements(mutation: D1RecordMutation): D1PreparedStatement[] {

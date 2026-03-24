@@ -18,6 +18,7 @@ export function parseFilterClauses(
   clauses: string[],
   bindings: unknown[],
   objectSchema?: ObjectSchema,
+  columnPrefix = '',
 ): void {
   // Keep SQL compilation aligned with the shared runtime matcher in
   // `packages/relate/src/filters.ts`, which powers non-SQL checks such as
@@ -25,13 +26,14 @@ export function parseFilterClauses(
   for (const [key, value] of Object.entries(filter)) {
     assertSafeKey(key)
     const attrSchema = objectSchema?.attributes[key]
+    const column = `${columnPrefix}${key}`
 
     if (objectSchema && !attrSchema) {
       throw new ValidationError({ message: `Unknown filter attribute "${key}"`, field: key })
     }
 
     if (value === null || value === undefined || typeof value !== 'object' || value instanceof Date || Array.isArray(value)) {
-      clauses.push(`${key} = ?`)
+      clauses.push(`${column} = ?`)
       bindings.push(attrSchema ? filterValueToSql(attrSchema, value, key) : value)
       continue
     }
@@ -47,7 +49,7 @@ export function parseFilterClauses(
         if (arr.length === 0) {
           clauses.push('0')
         } else {
-          clauses.push(`${key} IN (${arr.map(() => '?').join(', ')})`)
+          clauses.push(`${column} IN (${arr.map(() => '?').join(', ')})`)
           bindings.push(...arr.map((entry) => (attrSchema ? filterValueToSql(attrSchema, entry, key) : entry)))
         }
       } else if (op === 'like') {
@@ -57,16 +59,16 @@ export function parseFilterClauses(
             throw new ValidationError({ message: `Operator "like" is not supported for attribute "${key}"`, field: key })
           }
         }
-        clauses.push(`${key} ${OP_TO_SQL[op]} ?`)
+        clauses.push(`${column} ${OP_TO_SQL[op]} ?`)
         bindings.push(opValue)
       } else {
-        clauses.push(`${key} ${OP_TO_SQL[op]} ?`)
+        clauses.push(`${column} ${OP_TO_SQL[op]} ?`)
         bindings.push(attrSchema ? filterValueToSql(attrSchema, opValue, key) : opValue)
       }
     }
 
     if (!hasOps) {
-      clauses.push(`${key} = ?`)
+      clauses.push(`${column} = ?`)
       bindings.push(attrSchema ? filterValueToSql(attrSchema, value, key) : value)
     }
   }

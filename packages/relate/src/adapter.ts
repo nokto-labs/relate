@@ -26,6 +26,7 @@ export interface AggregateRecordsResult {
   count?: number
   sum?: number
   groups?: Record<string, number>
+  groupSums?: Record<string, number>
 }
 
 export interface PaginatedResult<T = RelateRecord> {
@@ -154,9 +155,6 @@ export interface StorageAdapter {
   cleanupRecordRefs?(objectSlug: string, id: string): Promise<void>
   /** Apply multiple record mutations atomically when the adapter supports it */
   commitRecordMutations?(mutations: RecordMutation[]): Promise<void>
-  /** Execute record operations inside a transaction when the adapter supports it */
-  transaction?<T>(run: (adapter: StorageAdapter) => Promise<T>): Promise<T>
-
   // Relationships
   createRelationship(input: CreateRelationshipInput): Promise<Relationship>
   listRelationships(ref?: { object: string; id: string }, options?: ListRelationshipsOptions): Promise<Relationship[]>

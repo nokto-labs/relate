@@ -33,6 +33,20 @@ export const testSchema = defineSchema({
         stage: { type: 'select', options: ['lead', 'qualified', 'won'] as const },
       },
     },
+    price: {
+      plural: 'prices',
+      attributes: {
+        name: 'text',
+        amountCents: { type: 'number', required: true },
+      },
+    },
+    ticket: {
+      plural: 'tickets',
+      attributes: {
+        price: { type: 'ref', object: 'price', required: true },
+        paymentStatus: { type: 'select', options: ['pending', 'confirmed', 'refunded'] as const },
+      },
+    },
   },
   relationships: {
     works_at: { from: 'person', to: 'company' },
@@ -56,7 +70,7 @@ async function getDB(): Promise<D1Database> {
 }
 
 const ALL_TABLES = [
-  'relate_person', 'relate_company', 'relate_deal',
+  'relate_person', 'relate_company', 'relate_deal', 'relate_price', 'relate_ticket',
   'relate_relationships', 'relate_activities',
   'relate_lists', 'relate_list_items', 'relate_migrations',
 ]

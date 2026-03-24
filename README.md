@@ -77,7 +77,6 @@ export default app
 ## What You Get
 
 - Typed object clients with `create`, `upsert`, `get`, `find`, `findPage`, `count`, `aggregate`, `update`, and `delete`
-- Adapter-backed record transactions with `db.transaction()` where the adapter supports them
 - `ref` attributes with `restrict`, `cascade`, `set_null`, and `none` delete behavior
 - First-class relationships between any records
 - Immutable activity timelines

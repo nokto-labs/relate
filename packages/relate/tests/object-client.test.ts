@@ -213,6 +213,29 @@ describe('ObjectClient', () => {
       warn.mockRestore()
     })
 
+    it('supports groupBy together with sum in the JavaScript fallback for direct fields', async () => {
+      const { db } = createTestDB()
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      await db.deal.create({ title: 'A', stage: 'won', value: 100 })
+      await db.deal.create({ title: 'B', stage: 'won', value: 250 })
+      await db.deal.create({ title: 'C', stage: 'lead', value: 80 })
+
+      expect(await db.deal.aggregate({ count: true, groupBy: 'stage', sum: { field: 'value' } })).toEqual({
+        groups: {
+          won: 2,
+          lead: 1,
+        },
+        groupSums: {
+          won: 350,
+          lead: 80,
+        },
+      })
+
+      expect(warn).toHaveBeenCalledTimes(1)
+      warn.mockRestore()
+    })
+
     it('groups counts by field', async () => {
       const { db } = createTestDB()
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
@@ -230,57 +253,24 @@ describe('ObjectClient', () => {
 
       warn.mockRestore()
     })
+
+    it('rejects ref-aware sums without native adapter aggregate support', async () => {
+      const { db } = createTestDB()
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      const basic = await db.price.create({ name: 'Basic', amountCents: 1200 })
+      await db.ticket.create({ price: basic.id, paymentStatus: 'confirmed' })
+
+      await expect(
+        db.ticket.aggregate({
+          filter: { paymentStatus: 'confirmed' },
+          sum: { field: 'price.amountCents' },
+        }),
+      ).rejects.toThrow(ValidationError)
+
+      expect(warn).not.toHaveBeenCalled()
+      warn.mockRestore()
+    })
   })
 
-  describe('transaction', () => {
-    it('commits record operations on success', async () => {
-      const { db } = createTestDB()
-
-      const id = await db.transaction(async (tx) => {
-        const person = await tx.person.create({ email: 'alice@test.com', name: 'Alice' })
-        await tx.person.update(person.id, { name: 'Alicia' })
-        return person.id
-      })
-
-      const stored = await db.person.get(id)
-      expect(stored?.name).toBe('Alicia')
-    })
-
-    it('supports upsert inside a transaction', async () => {
-      const { db } = createTestDB()
-
-      await db.transaction(async (tx) => {
-        await tx.person.upsert({ email: 'alice@test.com', name: 'Alice' })
-        await tx.person.upsert({ email: 'alice@test.com', name: 'Alicia' })
-      })
-
-      const stored = await db.person.find()
-      expect(stored).toHaveLength(1)
-      expect(stored[0].name).toBe('Alicia')
-    })
-
-    it('rolls back record operations on failure', async () => {
-      const { db } = createTestDB()
-
-      await expect(db.transaction(async (tx) => {
-        await tx.person.create({ email: 'rolled-back@test.com' })
-        throw new Error('stop')
-      })).rejects.toThrow('stop')
-
-      expect(await db.person.find()).toEqual([])
-    })
-
-    it('emits queued events only after commit', async () => {
-      const { db, events } = createTestDB()
-      const created = vi.fn()
-      events.on('person.created', created)
-
-      await db.transaction(async (tx) => {
-        await tx.person.create({ email: 'queued@test.com' })
-        expect(created).not.toHaveBeenCalled()
-      })
-
-      expect(created).toHaveBeenCalledTimes(1)
-    })
-  })
 })

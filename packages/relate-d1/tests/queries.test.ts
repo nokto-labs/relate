@@ -143,6 +143,82 @@ describe('D1 Queries', () => {
     warn.mockRestore()
   })
 
+  it('aggregates grouped counts and sums natively without warning', async () => {
+    const { db } = await createD1TestDB()
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    await db.deal.create({ title: 'A', stage: 'won', value: 100 })
+    await db.deal.create({ title: 'B', stage: 'won', value: 250 })
+    await db.deal.create({ title: 'C', stage: 'lead', value: 80 })
+
+    expect(await db.deal.aggregate({ count: true, groupBy: 'stage', sum: { field: 'value' } })).toEqual({
+      groups: {
+        lead: 1,
+        won: 2,
+      },
+      groupSums: {
+        lead: 80,
+        won: 350,
+      },
+    })
+
+    expect(warn).not.toHaveBeenCalled()
+    warn.mockRestore()
+  })
+
+  it('aggregates sums across one ref hop natively without warning', async () => {
+    const { db } = await createD1TestDB()
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const basic = await db.price.create({ name: 'Basic', amountCents: 1200 })
+    const vip = await db.price.create({ name: 'VIP', amountCents: 4500 })
+
+    await db.ticket.create({ price: basic.id, paymentStatus: 'confirmed' })
+    await db.ticket.create({ price: basic.id, paymentStatus: 'confirmed' })
+    await db.ticket.create({ price: vip.id, paymentStatus: 'pending' })
+
+    expect(await db.ticket.aggregate({
+      filter: { paymentStatus: 'confirmed' },
+      sum: { field: 'price.amountCents' },
+    })).toEqual({
+      sum: 2400,
+    })
+
+    expect(warn).not.toHaveBeenCalled()
+    warn.mockRestore()
+  })
+
+  it('aggregates grouped sums across one ref hop natively without warning', async () => {
+    const { db } = await createD1TestDB()
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const basic = await db.price.create({ name: 'Basic', amountCents: 1200 })
+    const vip = await db.price.create({ name: 'VIP', amountCents: 4500 })
+
+    await db.ticket.create({ price: basic.id, paymentStatus: 'confirmed' })
+    await db.ticket.create({ price: basic.id, paymentStatus: 'confirmed' })
+    await db.ticket.create({ price: vip.id, paymentStatus: 'confirmed' })
+
+    expect(await db.ticket.aggregate({
+      filter: { paymentStatus: 'confirmed' },
+      count: true,
+      groupBy: 'price',
+      sum: { field: 'price.amountCents' },
+    })).toEqual({
+      groups: {
+        [basic.id]: 2,
+        [vip.id]: 1,
+      },
+      groupSums: {
+        [basic.id]: 2400,
+        [vip.id]: 4500,
+      },
+    })
+
+    expect(warn).not.toHaveBeenCalled()
+    warn.mockRestore()
+  })
+
   // ─── Ordering ──────────────────────────────────────────────────────
 
   it('orders ascending', async () => {
@@ -277,13 +353,5 @@ describe('D1 Queries', () => {
     const page = await db.deal.findPage({ filter: { stage: 'nonexistent' } })
     expect(page.records).toEqual([])
     expect(page.nextCursor).toBeUndefined()
-  })
-
-  it('reports interactive transactions as unsupported on D1', async () => {
-    const { db } = await createD1TestDB()
-
-    await expect(db.transaction(async () => 'ok')).rejects.toThrow(
-      'D1Adapter does not support interactive transactions yet',
-    )
   })
 })

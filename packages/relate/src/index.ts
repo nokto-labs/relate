@@ -7,10 +7,6 @@ export type { ErrorCode, ErrorDetail } from './errors'
 
 export type { Relate } from './relate'
 export type {
-  TransactionRelate,
-  TransactionRecordClient,
-} from './relate'
-export type {
   StorageAdapter,
   CreateRelationshipInput,
   TrackActivityInput,
