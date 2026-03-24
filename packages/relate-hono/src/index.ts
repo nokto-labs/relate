@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { type SchemaDefinition, type EventBus, RelateError } from '@nokto-labs/relate'
+import { type SchemaDefinition, RelateError } from '@nokto-labs/relate'
 import type { AnyRelate, HonoEnv } from './types'
 import { migrateRoutes } from './routes/migrate'
 import { relationshipRoutes } from './routes/relationships'
@@ -7,6 +7,7 @@ import { activityRoutes } from './routes/activities'
 import { listRoutes } from './routes/lists'
 import { recordRoutes } from './routes/records'
 import { schemaRoutes } from './routes/schema'
+import { validateMaxLimit } from './limits'
 
 export type { AnyRelate } from './types'
 
@@ -24,7 +25,6 @@ export interface RouteToggles {
 export interface RelateRoutesConfig<E extends object> {
   schema: SchemaDefinition
   db: (c: { env: E }) => AnyRelate
-  events?: EventBus
   prefix?: string
   middleware?: MiddlewareFn | MiddlewareFn[]
   routes?: RouteToggles
@@ -36,25 +36,24 @@ export interface RelateRoutesConfig<E extends object> {
  *
  * @example
  * ```ts
- * const events = new EventBus()
- *
- * events.on('person.created', async ({ record, db }) => {
- *   await db.person.update(record.id, { source: 'api' })
- * })
- *
  * app.route('/', relateRoutes({
  *   schema,
- *   events,
- *   db: (c) => relate({ adapter: new D1Adapter(c.env.DB), schema, events }),
+ *   db: (c) => relate({ adapter: new D1Adapter(c.env.DB), schema }),
  * }))
  * ```
  */
 export function relateRoutes<E extends object = Record<string, unknown>>(
   config: RelateRoutesConfig<E>,
 ): Hono<{ Bindings: E }> {
-  const { schema, db: getDB, prefix, middleware, routes: toggles, maxLimit } = config
+  const { schema, db: getDB, prefix, middleware, routes: toggles } = config
+  const maxLimit = validateMaxLimit(config.maxLimit)
   const objects = schema.objects
-  const enabled = (key: keyof RouteToggles) => toggles?.[key] !== false
+  const enabled = (key: keyof RouteToggles) => {
+    if (key === 'schema' || key === 'migrate') {
+      return toggles?.[key] === true
+    }
+    return toggles?.[key] !== false
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const app = new Hono<any>()
@@ -83,7 +82,7 @@ export function relateRoutes<E extends object = Record<string, unknown>>(
   // Relate instance per request
   app.use('*', async (c, next) => {
     c.set('db', getDB(c))
-    if (maxLimit) c.set('maxLimit', maxLimit)
+    if (maxLimit !== undefined) c.set('maxLimit', maxLimit)
     await next()
   })
 
@@ -93,7 +92,7 @@ export function relateRoutes<E extends object = Record<string, unknown>>(
   if (enabled('migrate')) r.route('/', migrateRoutes())
   if (enabled('relationships')) r.route('/', relationshipRoutes(pluralToSlug))
   if (enabled('activities')) r.route('/', activityRoutes(pluralToSlug))
-  if (enabled('lists')) r.route('/', listRoutes())
+  if (enabled('lists')) r.route('/', listRoutes(objects))
   if (enabled('records')) r.route('/', recordRoutes(objects, pluralToSlug))
 
   app.route(prefix ?? '/', r as any)

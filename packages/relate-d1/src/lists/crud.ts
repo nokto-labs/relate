@@ -1,6 +1,7 @@
 import { type RelateList, type CreateListInput, type ListListsOptions, NotFoundError, ValidationError } from '@nokto-labs/relate'
 import type { D1Database } from '../d1-types'
 import { type ListRow, rowToList } from './types'
+import { normalizeNonNegativeInteger } from '../pagination'
 
 export async function getListOrThrow(db: D1Database, listId: string): Promise<RelateList> {
   const list = await getList(db, listId)
@@ -63,14 +64,16 @@ export async function listLists(
 
   const where = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : ''
   let sql = `SELECT * FROM relate_lists ${where} ORDER BY created_at DESC`
+  const limit = normalizeNonNegativeInteger(options?.limit, 'limit')
+  const offset = normalizeNonNegativeInteger(options?.offset, 'offset')
 
-  if (options?.limit !== undefined) {
+  if (limit !== undefined) {
     sql += ' LIMIT ?'
-    bindings.push(options.limit)
+    bindings.push(limit)
   }
-  if (options?.offset !== undefined) {
+  if (offset !== undefined) {
     sql += ' OFFSET ?'
-    bindings.push(options.offset)
+    bindings.push(offset)
   }
 
   const result = await db.prepare(sql).bind(...bindings).all<ListRow>()
@@ -120,6 +123,7 @@ export async function updateList(
 }
 
 export async function deleteList(db: D1Database, id: string): Promise<void> {
+  await getListOrThrow(db, id)
   await db.batch([
     db.prepare('DELETE FROM relate_list_items WHERE list_id = ?').bind(id),
     db.prepare('DELETE FROM relate_lists WHERE id = ?').bind(id),

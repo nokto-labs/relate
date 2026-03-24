@@ -45,6 +45,31 @@ describe('D1 Lists', () => {
       expect(await db.lists.count(list.id)).toBe(1)
     })
 
+    it('rejects missing record ids', async () => {
+      const { db } = await createD1TestDB()
+      const list = await db.lists.create({ name: 'Strict', object: 'person', type: 'static' })
+
+      await expect(db.lists.addTo(list.id, ['missing-person'])).rejects.toMatchObject({
+        name: 'ValidationError',
+        detail: expect.objectContaining({ code: 'VALIDATION_ERROR', field: 'recordIds' }),
+      })
+    })
+
+    it('supports adding more than one D1-sized batch of ids', async () => {
+      const { db } = await createD1TestDB()
+      const ids: string[] = []
+
+      for (let index = 0; index < 105; index++) {
+        const person = await db.person.create({ email: `batch-${index}@test.com` })
+        ids.push(person.id)
+      }
+
+      const list = await db.lists.create({ name: 'Big Batch', object: 'person', type: 'static' })
+      await db.lists.addTo(list.id, ids)
+
+      expect(await db.lists.count(list.id)).toBe(105)
+    })
+
     it('cascade: deleting a record removes it from lists', async () => {
       const { db } = await createD1TestDB()
       const person = await db.person.create({ email: 'cascade@test.com' })
@@ -54,6 +79,19 @@ describe('D1 Lists', () => {
       await db.person.delete(person.id)
 
       expect(await db.lists.count(list.id)).toBe(0)
+    })
+
+    it('counts only real records even if stale memberships exist', async () => {
+      const { db, d1 } = await createD1TestDB()
+      const list = await db.lists.create({ name: 'Stale', object: 'person', type: 'static' })
+
+      await d1
+        .prepare('INSERT INTO relate_list_items (list_id, record_id, added_at) VALUES (?, ?, ?)')
+        .bind(list.id, 'ghost-person', Date.now())
+        .run()
+
+      expect(await db.lists.count(list.id)).toBe(0)
+      expect((await db.lists.items(list.id)).records).toHaveLength(0)
     })
   })
 
@@ -107,6 +145,27 @@ describe('D1 Lists', () => {
       await db.deal.update(deal.id, { stage: 'won' })
 
       expect(await db.lists.count(list.id)).toBe(1)
+    })
+
+    it('does not let caller filters override the saved segment', async () => {
+      const { db } = await createD1TestDB()
+      await db.deal.create({ title: 'Won', stage: 'won', value: 150 })
+      await db.deal.create({ title: 'Lead', stage: 'lead', value: 150 })
+      await db.deal.create({ title: 'Big Won', stage: 'won', value: 250 })
+
+      const list = await db.lists.create({
+        name: 'Won under 200',
+        object: 'deal',
+        type: 'dynamic',
+        filter: { stage: 'won', value: { gte: 100 } },
+      })
+
+      const items = await db.lists.items(list.id, {
+        filter: { stage: 'lead', value: { lte: 200 } },
+      })
+
+      expect(items.records).toHaveLength(1)
+      expect((items.records[0] as any).title).toBe('Won')
     })
 
     it('rejects invalid filter keys when updating a dynamic list', async () => {

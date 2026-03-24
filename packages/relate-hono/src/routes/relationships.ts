@@ -19,7 +19,7 @@ export function relationshipRoutes(pluralToSlug: Record<string, string>) {
   app.get('/relationships', async (c) => {
     const db = c.get('db')
     const type = c.req.query('type')
-    const limit = capLimit(c.req.query('limit') ? Number(c.req.query('limit')) : undefined, c.get('maxLimit'))
+    const limit = capLimit(c.req.query('limit'), c.get('maxLimit'))
     return c.json(await db.relationships.list(undefined, { type, limit }))
   })
 
@@ -27,7 +27,7 @@ export function relationshipRoutes(pluralToSlug: Record<string, string>) {
     const db = c.get('db')
     const slug = pluralToSlug[c.req.param('plural')] ?? c.req.param('plural')
     const type = c.req.query('type')
-    const limit = capLimit(c.req.query('limit') ? Number(c.req.query('limit')) : undefined, c.get('maxLimit'))
+    const limit = capLimit(c.req.query('limit'), c.get('maxLimit'))
     return c.json(await db.relationships.list({ object: slug, id: c.req.param('id') }, { type, limit }))
   })
 

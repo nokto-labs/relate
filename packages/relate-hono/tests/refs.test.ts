@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest'
 import { Miniflare } from 'miniflare'
-import { relate, defineSchema, EventBus } from '@nokto-labs/relate'
+import { relate, defineSchema } from '@nokto-labs/relate'
 import { D1Adapter } from '../../relate-d1/src'
 import type { D1Database } from '../../relate-d1/src'
 import { relateRoutes } from '../src'
@@ -80,17 +80,15 @@ async function resetDB() {
 
 async function createTestApp(activeSchema = schema) {
   const raw = await getDB()
-  const events = new EventBus()
   const adapter = new D1Adapter(raw)
   await adapter.migrate(activeSchema.objects)
 
   const app = relateRoutes({
     schema: activeSchema,
-    db: () => relate({ adapter: new D1Adapter(raw), schema: activeSchema, events }),
-    events,
+    db: () => relate({ adapter: new D1Adapter(raw), schema: activeSchema }),
   } as any)
 
-  return { app, events }
+  return { app }
 }
 
 function req(app: any, method: string, path: string, body?: unknown) {

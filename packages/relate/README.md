@@ -96,7 +96,7 @@ await db.relationships.create({
 |--------|-------------|
 | `attributes` | Record fields |
 | `plural` | REST name, defaults to `slug + "s"` |
-| `uniqueBy` | Field used by `upsert()` and duplicate detection |
+| `uniqueBy` | Field used by `upsert()` and duplicate detection; storage adapters can enforce it as a hard uniqueness guarantee |
 
 ## Client API
 
@@ -152,7 +152,7 @@ await db.relationships.create({
 
 | Method | Description |
 |--------|-------------|
-| `create(input)` | Create a relationship row |
+| `create(input)` | Create a relationship row; declared relationship types are validated against the schema |
 | `list(ref?, options?)` | List relationships, optionally scoped to a record |
 | `update(id, attributes)` | Update relationship attributes |
 | `delete(id)` | Delete a relationship |
@@ -161,7 +161,7 @@ await db.relationships.create({
 
 | Method | Description |
 |--------|-------------|
-| `track(input)` | Append an activity |
+| `track(input)` | Append an activity for an existing record |
 | `list(ref?, options?)` | List activities, optionally scoped to a record |
 
 ### Lists client
@@ -173,9 +173,9 @@ await db.relationships.create({
 | `list(options?)` | List all lists |
 | `update(id, attrs)` | Update a list's name or filter |
 | `delete(id)` | Delete a list |
-| `addTo(listId, recordIds)` | Add records to a static list |
+| `addTo(listId, recordIds)` | Add existing records to a static list |
 | `removeFrom(listId, recordIds)` | Remove records from a static list |
-| `items(listId, options?)` | Get list items |
+| `items(listId, options?)` | Get list items; saved dynamic filters cannot be overridden at read time |
 | `count(listId, filter?)` | Count list items |
 
 ## Refs
@@ -211,6 +211,16 @@ event: { type: 'ref', object: 'event', required: true, onDelete: 'restrict' }
 - Cascade deletes and `set_null` updates emit the same `*.deleted` and `*.updated` hooks as direct operations
 - When an adapter supports batched record mutations, the entire cascade plan can be committed atomically
 - `@nokto-labs/relate-d1` supports atomic cascade application
+
+## Relationships
+
+When you declare relationship types in `schema.relationships`, `db.relationships.create()` validates that:
+
+- the relationship type exists
+- the `from` and `to` objects match the declared shape
+- both endpoint records exist
+
+If `schema.relationships` is omitted, relationship `type` remains open-ended and is not schema-validated.
 
 ## Filtering
 
@@ -338,7 +348,7 @@ const db = relate({ adapter: myAdapter, schema, events })
 - `updated` handlers receive `{ record, changes, db }`
 - `deleted` handlers receive `{ id, db }`
 - Hook errors are isolated and logged
-- Recursive hook chains are capped at depth 5
+- Recursive hook chains are capped at depth 5 per event name
 
 ## Errors
 

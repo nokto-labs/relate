@@ -1,5 +1,6 @@
 import { type Relationship, type CreateRelationshipInput, type ListRelationshipsOptions, NotFoundError } from '@nokto-labs/relate'
 import type { D1Database } from './d1-types'
+import { normalizeNonNegativeInteger } from './pagination'
 
 interface RelationshipRow {
   id: string
@@ -77,10 +78,11 @@ export async function listRelationships(
 
   const where = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : ''
   let sql = `SELECT * FROM relate_relationships ${where} ORDER BY created_at DESC`
+  const limit = normalizeNonNegativeInteger(options?.limit, 'limit')
 
-  if (options?.limit !== undefined) {
+  if (limit !== undefined) {
     sql += ' LIMIT ?'
-    bindings.push(options.limit)
+    bindings.push(limit)
   }
 
   const result = await db.prepare(sql).bind(...bindings).all<RelationshipRow>()
@@ -88,6 +90,8 @@ export async function listRelationships(
 }
 
 export async function deleteRelationship(db: D1Database, id: string): Promise<void> {
+  const existing = await db.prepare('SELECT id FROM relate_relationships WHERE id = ?').bind(id).first<{ id: string }>()
+  if (!existing) throw new NotFoundError({ code: 'RELATIONSHIP_NOT_FOUND', id }, `Relationship "${id}" not found`)
   await db.prepare('DELETE FROM relate_relationships WHERE id = ?').bind(id).run()
 }
 

@@ -48,10 +48,10 @@ export default app
 - relationships routes
 - activities routes
 - lists routes
-- schema inspection
-- migration routes
+- optional schema inspection
+- optional migration routes
 
-Every route group can be disabled individually.
+Record, relationship, activity, and list routes are enabled by default. Meta routes (`/schema` and `/migrate`) are opt-in.
 
 ## Records
 
@@ -230,17 +230,18 @@ Responses return:
 | `GET` | `/schema` | Return the schema |
 | `POST` | `/migrate` | Run migrations |
 
+Meta routes are disabled by default. Enable them explicitly with `routes: { schema: true, migrate: true }`.
+
 ## Options
 
 ```typescript
 relateRoutes({
   schema,
   db: (c) => relate({ ... }),
-  events,
   prefix: '/api/v1',
   middleware: [auth],
   maxLimit: 100,
-  routes: { lists: false },
+  routes: { lists: false, schema: true, migrate: true },
 })
 ```
 
@@ -248,7 +249,6 @@ relateRoutes({
 |--------|---------|
 | `schema` | Your Relate schema |
 | `db` | Factory that returns a Relate instance per request |
-| `events` | Shared `EventBus` for request-time hooks |
 | `prefix` | Prefix all generated routes |
 | `middleware` | Hono middleware to run before routes |
 | `maxLimit` | Cap `?limit=` values |
@@ -273,7 +273,7 @@ Relate SDK errors are mapped to HTTP responses automatically.
 ## Good to know
 
 - `db` must be a factory function, not a shared Relate instance
-- Pass the same `EventBus` to `relate()` and `relateRoutes()` if you want hooks during API requests
+- If you want hooks during API requests, create an `EventBus` in your app and pass it into `relate()` inside the `db` factory
 - Nested ref routes only exist for ref fields
 - Use flat `PATCH` and `DELETE` routes for child records even when nested create/list routes exist
 

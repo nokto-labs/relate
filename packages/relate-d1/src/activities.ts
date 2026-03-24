@@ -1,5 +1,6 @@
-import type { Activity, TrackActivityInput, ListActivitiesOptions } from '@nokto-labs/relate'
+import { type Activity, type TrackActivityInput, type ListActivitiesOptions, ValidationError } from '@nokto-labs/relate'
 import type { D1Database } from './d1-types'
+import { normalizeNonNegativeInteger } from './pagination'
 
 interface ActivityRow {
   id: string
@@ -28,6 +29,9 @@ export async function trackActivity(
 ): Promise<Activity> {
   const id = crypto.randomUUID()
   const now = Date.now()
+  if (input.occurredAt && Number.isNaN(input.occurredAt.getTime())) {
+    throw new ValidationError({ message: 'Invalid occurredAt: expected a valid Date', field: 'occurredAt' })
+  }
   const occurredAt = input.occurredAt?.getTime() ?? now
 
   await db
@@ -82,15 +86,17 @@ export async function listActivities(
 
   const where = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : ''
   let sql = `SELECT * FROM relate_activities ${where} ORDER BY occurred_at DESC`
+  const limit = normalizeNonNegativeInteger(options?.limit, 'limit')
+  const offset = normalizeNonNegativeInteger(options?.offset, 'offset')
 
-  if (options?.limit !== undefined) {
+  if (limit !== undefined) {
     sql += ' LIMIT ?'
-    bindings.push(options.limit)
+    bindings.push(limit)
   }
 
-  if (options?.offset !== undefined) {
+  if (offset !== undefined) {
     sql += ' OFFSET ?'
-    bindings.push(options.offset)
+    bindings.push(offset)
   }
 
   const result = await db.prepare(sql).bind(...bindings).all<ActivityRow>()

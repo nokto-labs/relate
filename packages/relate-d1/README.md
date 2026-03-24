@@ -74,6 +74,8 @@ Call `await makeDb(env).migrate()` during setup or before your first write.
 
 When you add a new attribute to a schema, `migrate()` adds the corresponding column automatically.
 
+When an object defines `uniqueBy`, `migrate()` also creates a unique index for that field.
+
 ## Type mapping
 
 | Relate type | SQLite type |

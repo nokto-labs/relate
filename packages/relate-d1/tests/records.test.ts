@@ -50,6 +50,36 @@ describe('D1 Records', () => {
     expect(await db.person.count()).toBe(1)
   })
 
+  it('enforces uniqueBy at the database layer for direct adapter writes', async () => {
+    const { adapter } = await createD1TestDB()
+
+    await adapter.createRecord('person', { email: 'db-unique@test.com' })
+    await expect(adapter.createRecord('person', { email: 'db-unique@test.com' })).rejects.toMatchObject({
+      name: 'DuplicateError',
+      detail: expect.objectContaining({
+        code: 'DUPLICATE_RECORD',
+        field: 'email',
+      }),
+    })
+  })
+
+  it('rejects invalid pagination numbers in the adapter', async () => {
+    const { db } = await createD1TestDB()
+
+    await expect(db.person.find({ limit: -1 })).rejects.toMatchObject({
+      name: 'ValidationError',
+      detail: expect.objectContaining({ code: 'VALIDATION_ERROR', field: 'limit' }),
+    })
+    await expect(db.person.find({ offset: -1 })).rejects.toMatchObject({
+      name: 'ValidationError',
+      detail: expect.objectContaining({ code: 'VALIDATION_ERROR', field: 'offset' }),
+    })
+    await expect(db.person.findPage({ limit: -1 })).rejects.toMatchObject({
+      name: 'ValidationError',
+      detail: expect.objectContaining({ code: 'VALIDATION_ERROR', field: 'limit' }),
+    })
+  })
+
   it('updates specific fields without touching others', async () => {
     const { db } = await createD1TestDB()
     const person = await db.person.create({ email: 'partial@test.com', name: 'Alice', tier: 'vip' })

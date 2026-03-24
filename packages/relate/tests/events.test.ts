@@ -81,4 +81,25 @@ describe('EventBus', () => {
     expect(spy).toHaveBeenCalled()
     spy.mockRestore()
   })
+
+  it('does not let one recursive event starve unrelated events', async () => {
+    const bus = new EventBus()
+    const completed: string[] = []
+
+    bus.on('recurse', async () => {
+      completed.push('recurse')
+      if (completed.filter((event) => event === 'recurse').length === 1) {
+        await bus.emit('other', {})
+      }
+      await bus.emit('recurse', {})
+    })
+
+    bus.on('other', () => {
+      completed.push('other')
+    })
+
+    await bus.emit('recurse', {})
+
+    expect(completed).toContain('other')
+  })
 })

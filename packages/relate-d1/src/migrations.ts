@@ -1,5 +1,6 @@
 import type { D1Database } from './d1-types'
 import type { SchemaInput, ObjectSchema, AttributeSchema, Migration } from '@nokto-labs/relate'
+import { assertSafeKey } from './utils'
 
 // ─── Shared tables ────────────────────────────────────────────────────────────
 
@@ -132,6 +133,24 @@ async function migrateObjectTable(
       await db
         .prepare(`CREATE INDEX IF NOT EXISTS idx_${table}_${attrName} ON ${table}(${attrName})`)
         .run()
+    }
+  }
+
+  if (objectSchema.uniqueBy) {
+    assertSafeKey(objectSchema.uniqueBy)
+
+    try {
+      await db
+        .prepare(
+          `CREATE UNIQUE INDEX IF NOT EXISTS uq_${table}_${objectSchema.uniqueBy}
+           ON ${table}(${objectSchema.uniqueBy})
+           WHERE ${objectSchema.uniqueBy} IS NOT NULL`,
+        )
+        .run()
+    } catch (error) {
+      throw new Error(
+        `Cannot enforce uniqueBy on "${slug}.${objectSchema.uniqueBy}" because duplicate values already exist`,
+      )
     }
   }
 }

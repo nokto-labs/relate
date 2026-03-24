@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import type { HonoEnv } from '../types'
-import { capLimit } from '../limits'
+import { capLimit, parseDateQuery, parseOffset } from '../limits'
 
 export function activityRoutes(pluralToSlug: Record<string, string>) {
   const app = new Hono<HonoEnv>()
@@ -15,16 +15,16 @@ export function activityRoutes(pluralToSlug: Record<string, string>) {
     }>()
     return c.json(await db.activities.track({
       ...body,
-      occurredAt: body.occurredAt ? new Date(body.occurredAt) : undefined,
+      occurredAt: parseDateQuery(body.occurredAt, 'occurredAt'),
     }), 201)
   })
 
   app.get('/activities', async (c) => {
     const db = c.get('db')
     const type = c.req.query('type')
-    const limit = capLimit(c.req.query('limit') ? Number(c.req.query('limit')) : undefined, c.get('maxLimit'))
-    const offset = c.req.query('offset') ? Number(c.req.query('offset')) : undefined
-    const before = c.req.query('before') ? new Date(c.req.query('before')!) : undefined
+    const limit = capLimit(c.req.query('limit'), c.get('maxLimit'))
+    const offset = parseOffset(c.req.query('offset'))
+    const before = parseDateQuery(c.req.query('before'), 'before')
     return c.json(await db.activities.list(undefined, { type, limit, offset, before }))
   })
 
@@ -32,9 +32,9 @@ export function activityRoutes(pluralToSlug: Record<string, string>) {
     const db = c.get('db')
     const slug = pluralToSlug[c.req.param('plural')] ?? c.req.param('plural')
     const type = c.req.query('type')
-    const limit = capLimit(c.req.query('limit') ? Number(c.req.query('limit')) : undefined, c.get('maxLimit'))
-    const offset = c.req.query('offset') ? Number(c.req.query('offset')) : undefined
-    const before = c.req.query('before') ? new Date(c.req.query('before')!) : undefined
+    const limit = capLimit(c.req.query('limit'), c.get('maxLimit'))
+    const offset = parseOffset(c.req.query('offset'))
+    const before = parseDateQuery(c.req.query('before'), 'before')
     return c.json(await db.activities.list({ object: slug, id: c.req.param('id') }, { type, limit, offset, before }))
   })
 

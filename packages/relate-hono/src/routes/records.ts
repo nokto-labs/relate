@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import type { ObjectSchema, SchemaInput } from '@nokto-labs/relate'
 import type { HonoEnv, AnyRelate, AnyObjectClient } from '../types'
 import { parseFilters } from '../filters'
-import { capLimit } from '../limits'
+import { capLimit, parseOffset } from '../limits'
 
 export function recordRoutes(objects: SchemaInput, pluralToSlug: Record<string, string>) {
   const app = new Hono<HonoEnv>()
@@ -62,7 +62,7 @@ export function recordRoutes(objects: SchemaInput, pluralToSlug: Record<string, 
 
         const parentId = c.req.param('parentId')
         const maxLimit = c.get('maxLimit')
-        const limit = capLimit(c.req.query('limit') ? Number(c.req.query('limit')) : undefined, maxLimit)
+        const limit = capLimit(c.req.query('limit'), maxLimit)
         const orderBy = c.req.query('orderBy')
         const order = c.req.query('order') as 'asc' | 'desc' | undefined
         const cursor = c.req.query('cursor')
@@ -73,7 +73,7 @@ export function recordRoutes(objects: SchemaInput, pluralToSlug: Record<string, 
           return c.json(await resource.client.findPage({ filter, limit, orderBy, order, cursor: cursor || undefined }))
         }
 
-        const offset = c.req.query('offset') ? Number(c.req.query('offset')) : undefined
+        const offset = parseOffset(c.req.query('offset'))
         return c.json(await resource.client.find({ filter, limit, offset, orderBy, order }))
       })
 
@@ -136,14 +136,14 @@ export function recordRoutes(objects: SchemaInput, pluralToSlug: Record<string, 
     const order = c.req.query('order') as 'asc' | 'desc' | undefined
     const cursor = c.req.query('cursor')
     const maxLimit = c.get('maxLimit')
-    const limit = capLimit(c.req.query('limit') ? Number(c.req.query('limit')) : undefined, maxLimit)
+    const limit = capLimit(c.req.query('limit'), maxLimit)
     const filter = parseFilters(c.req.queries() ?? {}, resource.objectSchema)
 
     if (cursor !== undefined) {
       return c.json(await resource.client.findPage({ filter, limit, orderBy, order, cursor: cursor || undefined }))
     }
 
-    const offset = c.req.query('offset') ? Number(c.req.query('offset')) : undefined
+    const offset = parseOffset(c.req.query('offset'))
     return c.json(await resource.client.find({ filter, limit, offset, orderBy, order }))
   })
 

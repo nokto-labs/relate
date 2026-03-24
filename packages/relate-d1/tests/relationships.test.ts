@@ -23,6 +23,55 @@ describe('D1 Relationships', () => {
     expect(rel.createdAt).toBeInstanceOf(Date)
   })
 
+  it('rejects undeclared relationship types', async () => {
+    const { db } = await createD1TestDB()
+    const person = await db.person.create({ email: 'unknown-type@test.com' })
+    const company = await db.company.create({ domain: 'unknown-type.com' })
+
+    await expect(
+      db.relationships.create({
+        from: { object: 'person', id: person.id },
+        to: { object: 'company', id: company.id },
+        type: 'advisor',
+      }),
+    ).rejects.toMatchObject({
+      name: 'ValidationError',
+      detail: expect.objectContaining({ code: 'VALIDATION_ERROR', field: 'type' }),
+    })
+  })
+
+  it('rejects endpoint shapes that do not match the schema declaration', async () => {
+    const { db } = await createD1TestDB()
+    const person = await db.person.create({ email: 'shape@test.com' })
+    const company = await db.company.create({ domain: 'shape.com' })
+
+    await expect(
+      db.relationships.create({
+        from: { object: 'company', id: company.id },
+        to: { object: 'person', id: person.id },
+        type: 'works_at',
+      } as any),
+    ).rejects.toMatchObject({
+      name: 'ValidationError',
+      detail: expect.objectContaining({ code: 'VALIDATION_ERROR', field: 'type' }),
+    })
+  })
+
+  it('rejects relationships that point at missing records', async () => {
+    const { db } = await createD1TestDB()
+
+    await expect(
+      db.relationships.create({
+        from: { object: 'person', id: 'missing-person' },
+        to: { object: 'company', id: 'missing-company' },
+        type: 'works_at',
+      }),
+    ).rejects.toMatchObject({
+      name: 'RefNotFoundError',
+      detail: expect.objectContaining({ code: 'REF_NOT_FOUND', field: 'from' }),
+    })
+  })
+
   it('lists bidirectionally', async () => {
     const { db } = await createD1TestDB()
     const person = await db.person.create({ email: 'bi@test.com' })
@@ -109,6 +158,15 @@ describe('D1 Relationships', () => {
 
     const remaining = await db.relationships.list({ object: 'person', id: person.id })
     expect(remaining).toHaveLength(0)
+  })
+
+  it('throws when deleting a missing relationship', async () => {
+    const { db } = await createD1TestDB()
+
+    await expect(db.relationships.delete('missing')).rejects.toMatchObject({
+      name: 'NotFoundError',
+      detail: expect.objectContaining({ code: 'RELATIONSHIP_NOT_FOUND' }),
+    })
   })
 
   it('cascade: deleting a record cleans up its relationships', async () => {

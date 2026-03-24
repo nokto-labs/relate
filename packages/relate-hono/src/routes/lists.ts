@@ -1,8 +1,10 @@
 import { Hono } from 'hono'
+import type { SchemaInput } from '@nokto-labs/relate'
 import type { HonoEnv } from '../types'
-import { capLimit } from '../limits'
+import { parseFilters } from '../filters'
+import { capLimit, parseOffset } from '../limits'
 
-export function listRoutes() {
+export function listRoutes(objects: SchemaInput) {
   const app = new Hono<HonoEnv>()
 
   app.post('/lists', async (c) => {
@@ -20,8 +22,8 @@ export function listRoutes() {
     const db = c.get('db')
     const object = c.req.query('object')
     const type = c.req.query('type') as 'static' | 'dynamic' | undefined
-    const limit = capLimit(c.req.query('limit') ? Number(c.req.query('limit')) : undefined, c.get('maxLimit'))
-    const offset = c.req.query('offset') ? Number(c.req.query('offset')) : undefined
+    const limit = capLimit(c.req.query('limit'), c.get('maxLimit'))
+    const offset = parseOffset(c.req.query('offset'))
     return c.json(await db.lists.list({ object, type, limit, offset }))
   })
 
@@ -60,14 +62,25 @@ export function listRoutes() {
 
   app.get('/lists/:id/items', async (c) => {
     const db = c.get('db')
-    const limit = capLimit(c.req.query('limit') ? Number(c.req.query('limit')) : undefined, c.get('maxLimit'))
+    const list = await db.lists.get(c.req.param('id'))
+    if (!list) return c.json({ error: 'Not found' }, 404)
+
+    const objectSchema = objects[list.object]
+    const filter = parseFilters(c.req.queries() ?? {}, objectSchema)
+    const limit = capLimit(c.req.query('limit'), c.get('maxLimit'))
+    const offset = parseOffset(c.req.query('offset'))
     const cursor = c.req.query('cursor') || undefined
-    return c.json(await db.lists.items(c.req.param('id'), { limit, cursor }))
+    return c.json(await db.lists.items(c.req.param('id'), { filter, limit, offset, cursor }))
   })
 
   app.get('/lists/:id/count', async (c) => {
     const db = c.get('db')
-    return c.json({ count: await db.lists.count(c.req.param('id')) })
+    const list = await db.lists.get(c.req.param('id'))
+    if (!list) return c.json({ error: 'Not found' }, 404)
+
+    const objectSchema = objects[list.object]
+    const filter = parseFilters(c.req.queries() ?? {}, objectSchema)
+    return c.json({ count: await db.lists.count(c.req.param('id'), filter) })
   })
 
   return app

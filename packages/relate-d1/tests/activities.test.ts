@@ -90,4 +90,33 @@ describe('D1 Activities', () => {
 
     expect(activity.metadata).toEqual({})
   })
+
+  it('rejects activities for missing records', async () => {
+    const { db } = await createD1TestDB()
+
+    await expect(
+      db.activities.track({
+        record: { object: 'deal', id: 'missing-deal' },
+        type: 'viewed',
+      }),
+    ).rejects.toMatchObject({
+      name: 'RefNotFoundError',
+      detail: expect.objectContaining({ code: 'REF_NOT_FOUND', field: 'record' }),
+    })
+  })
+
+  it('rejects invalid pagination values', async () => {
+    const { db } = await createD1TestDB()
+    const deal = await db.deal.create({ title: 'Paged' })
+    await db.activities.track({ record: { object: 'deal', id: deal.id }, type: 'viewed' })
+
+    await expect(db.activities.list({ object: 'deal', id: deal.id }, { limit: -1 })).rejects.toMatchObject({
+      name: 'ValidationError',
+      detail: expect.objectContaining({ code: 'VALIDATION_ERROR', field: 'limit' }),
+    })
+    await expect(db.activities.list({ object: 'deal', id: deal.id }, { offset: -1 })).rejects.toMatchObject({
+      name: 'ValidationError',
+      detail: expect.objectContaining({ code: 'VALIDATION_ERROR', field: 'offset' }),
+    })
+  })
 })

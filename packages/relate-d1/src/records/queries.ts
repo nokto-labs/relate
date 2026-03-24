@@ -4,6 +4,7 @@ import { tableName } from '../migrations'
 import { rowToRecord, assertSafeKey } from '../utils'
 import { parseFilterClauses } from '../filters'
 import { encodeCursor, decodeCursor } from '../cursor'
+import { normalizeNonNegativeInteger } from '../pagination'
 
 export async function findRecords(
   db: D1Database,
@@ -24,14 +25,16 @@ export async function findRecords(
   assertSafeKey(col)
   const dir = options?.order === 'asc' ? 'ASC' : 'DESC'
   let sql = `SELECT * FROM ${table} ${where} ORDER BY ${col} ${dir}`
+  const limit = normalizeNonNegativeInteger(options?.limit, 'limit')
+  const offset = normalizeNonNegativeInteger(options?.offset, 'offset')
 
-  if (options?.limit !== undefined) {
+  if (limit !== undefined) {
     sql += ' LIMIT ?'
-    bindings.push(options.limit)
+    bindings.push(limit)
   }
-  if (options?.offset !== undefined) {
+  if (offset !== undefined) {
     sql += ' OFFSET ?'
-    bindings.push(options.offset)
+    bindings.push(offset)
   }
 
   const result = await db.prepare(sql).bind(...bindings).all<Record<string, unknown>>()
@@ -64,7 +67,7 @@ export async function findRecordsPage(
   }
 
   const where = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : ''
-  const limit = options?.limit ?? 50
+  const limit = normalizeNonNegativeInteger(options?.limit, 'limit') ?? 50
 
   const sql = `SELECT * FROM ${table} ${where} ORDER BY ${col} ${dir}, id ${dir} LIMIT ?`
   bindings.push(limit + 1)

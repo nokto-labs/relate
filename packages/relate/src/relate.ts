@@ -36,7 +36,7 @@ export function relate<T extends SchemaDefinition>(config: {
   const { adapter, schema } = config
   const objects = schema.objects
 
-  validateSchema(objects)
+  validateSchema(schema)
   adapter.setSchema?.(objects)
 
   const events = config.events ?? new EventBus()
@@ -57,8 +57,8 @@ export function relate<T extends SchemaDefinition>(config: {
       }
       return adapter.applyMigrations(migrations)
     },
-    relationships: new RelationshipsClient<T['objects']>(adapter),
-    activities: new ActivitiesClient<T['objects']>(adapter),
+    relationships: new RelationshipsClient<T['objects']>(adapter, schema),
+    activities: new ActivitiesClient<T['objects']>(adapter, objects),
     lists: new ListsClient<T['objects']>(adapter, objects),
     on: (event: string, handler: EventHandler<any>) => events.on(event, handler),
     off: (event: string, handler: EventHandler<any>) => events.off(event, handler),

@@ -24,6 +24,13 @@ export function cleanupRecordRefStatements(
     ).bind(id, objectSlug, id, objectSlug),
 
     // Remove from any static lists
-    db.prepare('DELETE FROM relate_list_items WHERE record_id = ?').bind(id),
+    db.prepare(
+      `DELETE FROM relate_list_items
+       WHERE record_id = ?
+         AND list_id IN (
+           SELECT id FROM relate_lists
+           WHERE object_slug = ? AND type = 'static'
+         )`
+    ).bind(id, objectSlug),
   ]
 }

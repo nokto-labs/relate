@@ -34,6 +34,10 @@ export const testSchema = defineSchema({
       },
     },
   },
+  relationships: {
+    works_at: { from: 'person', to: 'company' },
+    owner: { from: 'person', to: 'deal' },
+  },
 })
 
 let mf: Miniflare

@@ -1,5 +1,5 @@
 import { Miniflare } from 'miniflare'
-import { relate, defineSchema, EventBus } from '@nokto-labs/relate'
+import { relate, defineSchema } from '@nokto-labs/relate'
 import { D1Adapter } from '../../relate-d1/src'
 import type { D1Database } from '../../relate-d1/src'
 import { relateRoutes } from '../src'
@@ -53,7 +53,6 @@ export async function resetDB() {
 
 export async function createTestApp(overrides?: Record<string, unknown>) {
   const d1 = await getDB()
-  const events = new EventBus()
 
   // Ensure tables exist
   const adapter = new D1Adapter(d1)
@@ -61,12 +60,11 @@ export async function createTestApp(overrides?: Record<string, unknown>) {
 
   const app = relateRoutes({
     schema: testSchema,
-    db: () => relate({ adapter: new D1Adapter(d1), schema: testSchema, events }),
-    events,
+    db: () => relate({ adapter: new D1Adapter(d1), schema: testSchema }),
     ...overrides,
   } as any)
 
-  return { app, events }
+  return { app }
 }
 
 export async function cleanup() {

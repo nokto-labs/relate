@@ -31,7 +31,7 @@ const MAX_DEPTH = 5
 
 export class EventBus {
   private handlers = new Map<string, EventHandler<any>[]>()
-  private depth = 0
+  private activeDepthByEvent = new Map<string, number>()
 
   on(event: string, handler: EventHandler<any>): void {
     const list = this.handlers.get(event) ?? []
@@ -50,12 +50,13 @@ export class EventBus {
     const list = this.handlers.get(event)
     if (!list || list.length === 0) return
 
-    if (this.depth >= MAX_DEPTH) {
+    const depth = this.activeDepthByEvent.get(event) ?? 0
+    if (depth >= MAX_DEPTH) {
       console.warn(`[relate] Hook depth limit (${MAX_DEPTH}) reached for "${event}" — skipping to prevent infinite loop`)
       return
     }
 
-    this.depth++
+    this.activeDepthByEvent.set(event, depth + 1)
     try {
       for (const handler of list) {
         try {
@@ -65,7 +66,12 @@ export class EventBus {
         }
       }
     } finally {
-      this.depth--
+      const nextDepth = (this.activeDepthByEvent.get(event) ?? 1) - 1
+      if (nextDepth <= 0) {
+        this.activeDepthByEvent.delete(event)
+      } else {
+        this.activeDepthByEvent.set(event, nextDepth)
+      }
     }
   }
 }
