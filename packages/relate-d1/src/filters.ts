@@ -1,6 +1,6 @@
 import type { ObjectSchema } from '@nokto-labs/relate'
 import { FILTER_OPERATORS, ValidationError } from '@nokto-labs/relate'
-import { assertSafeKey, filterValueToSql } from './utils'
+import { assertSafeKey, filterValueToSql, quoteId } from './utils'
 
 const VALID_OPS = new Set<string>(FILTER_OPERATORS)
 const OP_TO_SQL: Record<string, string> = {
@@ -26,7 +26,7 @@ export function parseFilterClauses(
   for (const [key, value] of Object.entries(filter)) {
     assertSafeKey(key)
     const attrSchema = objectSchema?.attributes[key]
-    const column = `${columnPrefix}${key}`
+    const column = `${columnPrefix}${quoteId(key)}`
 
     if (objectSchema && !attrSchema) {
       throw new ValidationError({ message: `Unknown filter attribute "${key}"`, field: key })

@@ -1,7 +1,7 @@
 import { type RelateRecord, type ObjectSchema, type UpsertResult, DuplicateError, NotFoundError, ValidationError } from '@nokto-labs/relate'
 import type { D1Database, D1PreparedStatement } from '../d1-types'
 import { tableName } from '../migrations'
-import { valueToSql, rowToRecord, assertSafeKey } from '../utils'
+import { valueToSql, rowToRecord, assertSafeKey, quoteId } from '../utils'
 
 function serializedAttributes(
   objectSchema: ObjectSchema,
@@ -35,10 +35,10 @@ function maybeThrowDuplicate(
   const uniqueValue = attributes[objectSchema.uniqueBy]
   if (uniqueValue === undefined || uniqueValue === null) return
 
-  const table = tableName(objectSlug)
+  const rawTable = `relate_${objectSlug}`
   const message = errorMessage(error)
   if (!message.includes('UNIQUE constraint failed')) return
-  if (!message.includes(`${table}.${objectSchema.uniqueBy}`) && !message.includes(`uq_${table}_${objectSchema.uniqueBy}`)) return
+  if (!message.includes(`${rawTable}.${objectSchema.uniqueBy}`) && !message.includes(`uq_${rawTable}_${objectSchema.uniqueBy}`)) return
 
   throw new DuplicateError({ object: objectSlug, field: objectSchema.uniqueBy, value: uniqueValue })
 }
@@ -59,7 +59,7 @@ async function updateExistingRow(
     return rowToRecord(objectSchema, { ...existing, updated_at: now })
   }
 
-  const setClauses = attrEntries.map(([key]) => `${key} = ?`).join(', ')
+  const setClauses = attrEntries.map(([key]) => `${quoteId(key)} = ?`).join(', ')
   const values = attrEntries.map(([, value]) => value)
 
   try {
@@ -114,7 +114,7 @@ export function createRecordStatement(
 ): D1PreparedStatement {
   const table = tableName(objectSlug)
   const attrEntries = Object.entries(objectSchema.attributes)
-  const cols = ['id', ...attrEntries.map(([key]) => key), 'created_at', 'updated_at']
+  const cols = ['id', ...attrEntries.map(([key]) => quoteId(key)), 'created_at', 'updated_at']
   const placeholders = cols.map(() => '?').join(', ')
   const values = [
     id,
@@ -141,7 +141,7 @@ export async function upsertRecord(
   }
 
   const existing = await db
-    .prepare(`SELECT * FROM ${table} WHERE ${uniqueBy} = ? LIMIT 1`)
+    .prepare(`SELECT * FROM ${table} WHERE ${quoteId(uniqueBy)} = ? LIMIT 1`)
     .bind(uniqueValue)
     .first<Record<string, unknown>>()
 
@@ -157,7 +157,7 @@ export async function upsertRecord(
     if (!(error instanceof DuplicateError)) throw error
 
     const concurrent = await db
-      .prepare(`SELECT * FROM ${table} WHERE ${uniqueBy} = ? LIMIT 1`)
+      .prepare(`SELECT * FROM ${table} WHERE ${quoteId(uniqueBy)} = ? LIMIT 1`)
       .bind(uniqueValue)
       .first<Record<string, unknown>>()
 
@@ -214,7 +214,7 @@ export function updateRecordStatement(
     return db.prepare(`UPDATE ${table} SET updated_at = ? WHERE id = ?`).bind(updatedAtMs, id)
   }
 
-  const setClauses = attrEntries.map(([k]) => `${k} = ?`).join(', ')
+  const setClauses = attrEntries.map(([k]) => `${quoteId(k)} = ?`).join(', ')
   const values = attrEntries.map(([k, v]) => {
     const attrSchema = objectSchema.attributes[k]
     return attrSchema ? valueToSql(attrSchema, v, k) : v

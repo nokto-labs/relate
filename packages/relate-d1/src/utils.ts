@@ -95,3 +95,8 @@ export function assertSafeKey(key: string): void {
     throw new ValidationError({ message: `Invalid attribute key: "${key}"`, field: key })
   }
 }
+
+/** Double-quote a SQL identifier to safely escape reserved words. */
+export function quoteId(name: string): string {
+  return `"${name}"`
+}

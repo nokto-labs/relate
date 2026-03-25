@@ -1,6 +1,6 @@
 import type { D1Database } from './d1-types'
 import type { SchemaInput, ObjectSchema, AttributeSchema, Migration } from '@nokto-labs/relate'
-import { assertSafeKey } from './utils'
+import { assertSafeKey, quoteId } from './utils'
 
 // ─── Shared tables ────────────────────────────────────────────────────────────
 
@@ -78,7 +78,7 @@ export function tableName(slug: string): string {
   if (!/^[a-z][a-z0-9_]*$/.test(slug)) {
     throw new Error(`Invalid object slug: "${slug}". Must be lowercase letters, numbers, underscores.`)
   }
-  return `relate_${slug}`
+  return quoteId(`relate_${slug}`)
 }
 
 export function attrToSqlType(schema: AttributeSchema): string {
@@ -96,13 +96,13 @@ export function attrToSqlType(schema: AttributeSchema): string {
 /** Rename a column on an object table. Uses ALTER TABLE RENAME COLUMN (SQLite 3.25+). */
 export async function renameColumn(db: D1Database, objectSlug: string, oldName: string, newName: string): Promise<void> {
   const table = tableName(objectSlug)
-  await db.prepare(`ALTER TABLE ${table} RENAME COLUMN ${oldName} TO ${newName}`).run()
+  await db.prepare(`ALTER TABLE ${table} RENAME COLUMN ${quoteId(oldName)} TO ${quoteId(newName)}`).run()
 }
 
 /** Drop a column from an object table. Uses ALTER TABLE DROP COLUMN (SQLite 3.35+). */
 export async function dropColumn(db: D1Database, objectSlug: string, columnName: string): Promise<void> {
   const table = tableName(objectSlug)
-  await db.prepare(`ALTER TABLE ${table} DROP COLUMN ${columnName}`).run()
+  await db.prepare(`ALTER TABLE ${table} DROP COLUMN ${quoteId(columnName)}`).run()
 }
 
 // ─── Per-object table migration ───────────────────────────────────────────────
@@ -115,7 +115,7 @@ async function migrateObjectTable(
   const table = tableName(slug)
 
   const attrCols = Object.entries(objectSchema.attributes)
-    .map(([name, schema]) => `  ${name} ${attrToSqlType(schema)}`)
+    .map(([name, schema]) => `  ${quoteId(name)} ${attrToSqlType(schema)}`)
     .join(',\n')
 
   await db
@@ -130,13 +130,14 @@ async function migrateObjectTable(
     .run()
 
   // Add columns for any new attributes added to the schema
-  const info = await db.prepare(`PRAGMA table_info(${table})`).all<{ name: string }>()
+  const rawTable = `relate_${slug}`
+  const info = await db.prepare(`PRAGMA table_info(${rawTable})`).all<{ name: string }>()
   const existingCols = new Set(info.results.map((r) => r.name))
 
   for (const [attrName, attrSchema] of Object.entries(objectSchema.attributes)) {
     if (!existingCols.has(attrName)) {
       await db
-        .prepare(`ALTER TABLE ${table} ADD COLUMN ${attrName} ${attrToSqlType(attrSchema)}`)
+        .prepare(`ALTER TABLE ${table} ADD COLUMN ${quoteId(attrName)} ${attrToSqlType(attrSchema)}`)
         .run()
     }
   }
@@ -145,7 +146,7 @@ async function migrateObjectTable(
   for (const [attrName, attrSchema] of Object.entries(objectSchema.attributes)) {
     if (typeof attrSchema === 'object' && (attrSchema as { type: string }).type === 'ref') {
       await db
-        .prepare(`CREATE INDEX IF NOT EXISTS idx_${table}_${attrName} ON ${table}(${attrName})`)
+        .prepare(`CREATE INDEX IF NOT EXISTS "idx_${rawTable}_${attrName}" ON ${table}(${quoteId(attrName)})`)
         .run()
     }
   }
@@ -156,9 +157,9 @@ async function migrateObjectTable(
     try {
       await db
         .prepare(
-          `CREATE UNIQUE INDEX IF NOT EXISTS uq_${table}_${objectSchema.uniqueBy}
-           ON ${table}(${objectSchema.uniqueBy})
-           WHERE ${objectSchema.uniqueBy} IS NOT NULL`,
+          `CREATE UNIQUE INDEX IF NOT EXISTS "uq_${rawTable}_${objectSchema.uniqueBy}"
+           ON ${table}(${quoteId(objectSchema.uniqueBy)})
+           WHERE ${quoteId(objectSchema.uniqueBy)} IS NOT NULL`,
         )
         .run()
     } catch (error) {

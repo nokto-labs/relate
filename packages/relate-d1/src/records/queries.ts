@@ -1,7 +1,7 @@
 import type { RelateRecord, ObjectSchema, FindRecordsOptions, PaginatedResult } from '@nokto-labs/relate'
 import type { D1Database } from '../d1-types'
 import { tableName } from '../migrations'
-import { rowToRecord, assertSafeKey } from '../utils'
+import { rowToRecord, assertSafeKey, quoteId } from '../utils'
 import { parseFilterClauses } from '../filters'
 import { encodeCursor, decodeCursor } from '../cursor'
 import { normalizeNonNegativeInteger } from '../pagination'
@@ -21,8 +21,9 @@ export async function findRecords(
   }
 
   const where = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : ''
-  const col = options?.orderBy ?? 'created_at'
-  assertSafeKey(col)
+  const colRaw = options?.orderBy ?? 'created_at'
+  assertSafeKey(colRaw)
+  const col = quoteId(colRaw)
   const dir = options?.order === 'asc' ? 'ASC' : 'DESC'
   let sql = `SELECT * FROM ${table} ${where} ORDER BY ${col} ${dir}`
   const limit = normalizeNonNegativeInteger(options?.limit, 'limit')
@@ -55,8 +56,9 @@ export async function findRecordsPage(
     parseFilterClauses(options.filter, clauses, bindings, objectSchema)
   }
 
-  const col = options?.orderBy ?? 'created_at'
-  assertSafeKey(col)
+  const colRaw = options?.orderBy ?? 'created_at'
+  assertSafeKey(colRaw)
+  const col = quoteId(colRaw)
   const dir = options?.order === 'asc' ? 'ASC' : 'DESC'
 
   if (options?.cursor) {
@@ -80,7 +82,7 @@ export async function findRecordsPage(
   let nextCursor: string | undefined
   if (hasMore && rows.length > 0) {
     const last = rows[rows.length - 1]
-    nextCursor = encodeCursor(last[col], last['id'] as string)
+    nextCursor = encodeCursor(last[colRaw], last['id'] as string)
   }
 
   return { records, nextCursor }

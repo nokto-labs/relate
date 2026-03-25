@@ -3,7 +3,7 @@ import { ValidationError } from '@nokto-labs/relate'
 import type { D1Database } from '../d1-types'
 import { parseFilterClauses } from '../filters'
 import { tableName } from '../migrations'
-import { assertSafeKey, sqlToValue } from '../utils'
+import { assertSafeKey, sqlToValue, quoteId } from '../utils'
 
 function attributeType(schema: AttributeSchema): string {
   return typeof schema === 'string' ? schema : schema.type
@@ -44,7 +44,7 @@ function resolveSumSelect(
       })
     }
     assertSafeKey(field)
-    return { expression: `base.${field}` }
+    return { expression: `base.${quoteId(field)}` }
   }
 
   if (parts.length !== 2) {
@@ -92,8 +92,8 @@ function resolveSumSelect(
 
   const joinAlias = `sum_ref_${refField}`
   return {
-    expression: `${joinAlias}.${targetField}`,
-    joinClause: `LEFT JOIN ${tableName(refSchema.object)} ${joinAlias} ON base.${refField} = ${joinAlias}.id`,
+    expression: `${joinAlias}.${quoteId(targetField)}`,
+    joinClause: `LEFT JOIN ${tableName(refSchema.object)} ${joinAlias} ON base.${quoteId(refField)} = ${joinAlias}.id`,
   }
 }
 
@@ -120,7 +120,7 @@ export async function aggregateRecords(
 
   if (options.groupBy) {
     assertSafeKey(options.groupBy)
-    const selectParts = [`base.${options.groupBy} as group_value`]
+    const selectParts = [`base.${quoteId(options.groupBy)} as group_value`]
     if (options.count) {
       selectParts.push('COUNT(*) as group_count')
     }
@@ -130,7 +130,7 @@ export async function aggregateRecords(
 
     const result = await db
       .prepare(
-        `SELECT ${selectParts.join(', ')} FROM ${table} base ${join}${where} GROUP BY base.${options.groupBy}`,
+        `SELECT ${selectParts.join(', ')} FROM ${table} base ${join}${where} GROUP BY base.${quoteId(options.groupBy)}`,
       )
       .bind(...bindings)
       .all<{ group_value: unknown; group_count?: number; group_sum?: number }>()
