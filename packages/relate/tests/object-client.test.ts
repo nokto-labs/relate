@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
-import { createTestDB } from './helpers'
+import { createTestDB, createMockAdapter } from './helpers'
+import { relate, defineSchema } from '../src'
 import { DuplicateError, ValidationError, NotFoundError } from '../src/errors'
 
 describe('ObjectClient', () => {
@@ -59,6 +60,61 @@ describe('ObjectClient', () => {
 
       expect(handler).toHaveBeenCalledTimes(1)
       expect(handler.mock.calls[0][0].record.email).toBe('alice@test.com')
+    })
+
+    it('uses a custom id generator when configured', async () => {
+      let counter = 0
+      const db = relate({
+        adapter: createMockAdapter(),
+        schema: defineSchema({
+          objects: {
+            event: {
+              attributes: { title: 'text' },
+              id: () => `custom${++counter}`,
+            },
+          },
+        }),
+      })
+
+      const a = await db.event.create({ title: 'First' })
+      const b = await db.event.create({ title: 'Second' })
+      expect(a.id).toBe('custom1')
+      expect(b.id).toBe('custom2')
+    })
+
+    it('prepends idPrefix to generated IDs', async () => {
+      const db = relate({
+        adapter: createMockAdapter(),
+        schema: defineSchema({
+          objects: {
+            event: {
+              attributes: { title: 'text' },
+              idPrefix: 'evt',
+            },
+          },
+        }),
+      })
+
+      const event = await db.event.create({ title: 'Launch' })
+      expect(event.id).toMatch(/^evt_/)
+    })
+
+    it('combines idPrefix with a custom id generator', async () => {
+      const db = relate({
+        adapter: createMockAdapter(),
+        schema: defineSchema({
+          objects: {
+            event: {
+              attributes: { title: 'text' },
+              idPrefix: 'evt',
+              id: () => 'abc123',
+            },
+          },
+        }),
+      })
+
+      const event = await db.event.create({ title: 'Launch' })
+      expect(event.id).toBe('evt_abc123')
     })
   })
 

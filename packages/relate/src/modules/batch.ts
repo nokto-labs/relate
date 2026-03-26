@@ -2,6 +2,7 @@ import type { StorageAdapter, CreateRecordMutation, UpdateRecordMutation } from 
 import type { EventBus } from '../events'
 import type { SchemaInput, ObjectSchema, InferAttributes, RelateRecord } from '../types'
 import { DuplicateError, NotFoundError } from '../errors'
+import { generateId } from '../id'
 import { applyRecordMutationPlan, validateRefs, type PlannedRecordMutation } from '../ref-integrity'
 import { validateAttributes } from '../validation'
 
@@ -163,7 +164,7 @@ function createBatchBuilder<T extends SchemaInput>(
           const mutation: CreateRecordMutation = {
             type: 'create',
             objectSlug,
-            id: crypto.randomUUID(),
+            id: generateId(objectSchema),
             attributes: queuedAttributes,
             createdAtMs: batchTimestampMs,
           }

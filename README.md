@@ -77,6 +77,7 @@ export default app
 ## What You Get
 
 - Typed object clients with `create`, `upsert`, `get`, `find`, `findPage`, `count`, `aggregate`, `update`, and `delete`
+- Custom ID generation per object with optional prefixes (e.g. `evt_<id>`)
 - `ref` attributes with `restrict`, `cascade`, `set_null`, and `none` delete behavior
 - Null-aware typed filters for optional attributes
 - Atomic `db.batch()` writes for queued record creates and updates

@@ -87,6 +87,57 @@ describe('schema validation', () => {
     ).toThrow(InvalidSchemaError)
   })
 
+  it('rejects non-function id option', () => {
+    expect(() =>
+      relate({
+        adapter: createMockAdapter(),
+        schema: defineSchema({
+          objects: {
+            event: {
+              attributes: { title: 'text' },
+              id: 'not-a-function' as any,
+            },
+          },
+        }),
+      }),
+    ).toThrow(InvalidSchemaError)
+  })
+
+  it('rejects invalid idPrefix values', () => {
+    for (const bad of ['', 'EVT', 'evt-1', '1evt', 'evt_x']) {
+      expect(() =>
+        relate({
+          adapter: createMockAdapter(),
+          schema: defineSchema({
+            objects: {
+              event: {
+                attributes: { title: 'text' },
+                idPrefix: bad,
+              },
+            },
+          }),
+        }),
+      ).toThrow(InvalidSchemaError)
+    }
+  })
+
+  it('accepts valid id and idPrefix options', () => {
+    expect(() =>
+      relate({
+        adapter: createMockAdapter(),
+        schema: defineSchema({
+          objects: {
+            event: {
+              attributes: { title: 'text' },
+              id: () => 'custom123',
+              idPrefix: 'evt',
+            },
+          },
+        }),
+      }),
+    ).not.toThrow()
+  })
+
   it('rejects relationships that point at missing objects', () => {
     expect(() =>
       relate({

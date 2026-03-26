@@ -1,6 +1,7 @@
 import { type RelateRecord, type ObjectSchema, type UpsertResult, DuplicateError, NotFoundError, ValidationError } from '@nokto-labs/relate'
 import type { D1Database, D1PreparedStatement } from '../d1-types'
 import { tableName } from '../migrations'
+import { generateId } from '@nokto-labs/relate'
 import { valueToSql, rowToRecord, assertSafeKey, quoteId } from '../utils'
 
 function serializedAttributes(
@@ -85,7 +86,7 @@ export async function createRecord(
   objectSchema: ObjectSchema,
   attributes: Record<string, unknown>,
 ): Promise<RelateRecord> {
-  const id = crypto.randomUUID()
+  const id = generateId(objectSchema)
   const now = Date.now()
   const attrEntries = Object.entries(objectSchema.attributes)
 

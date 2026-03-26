@@ -97,6 +97,8 @@ await db.relationships.create({
 | `attributes` | Record fields |
 | `plural` | REST name, defaults to `slug + "s"` |
 | `uniqueBy` | Field used by `upsert()` and duplicate detection; storage adapters can enforce it as a hard uniqueness guarantee |
+| `id` | Custom ID generator function. Must return a string. Defaults to `crypto.randomUUID()` |
+| `idPrefix` | Prefix prepended to generated IDs (e.g. `'evt'` produces `evt_<id>`) |
 
 ## Client API
 

@@ -1,4 +1,4 @@
-import { relate, defineSchema, EventBus, DuplicateError, NotFoundError, matchesFilter } from '../src'
+import { relate, defineSchema, EventBus, DuplicateError, NotFoundError, matchesFilter, generateId } from '../src'
 import type { StorageAdapter, UpsertResult, RelateRecord, SchemaDefinition, SchemaInput, RecordMutation, ClaimWebhookInput, WebhookClaimResult, WebhookExecution } from '../src'
 
 // ─── In-memory storage for tests ─────────────────────────────────────────────
@@ -55,7 +55,8 @@ export function createMockAdapter(): StorageAdapter & { records: Map<string, Map
     setSchema(nextSchema) { schema = nextSchema },
 
     async createRecord(slug, attrs) {
-      const id = crypto.randomUUID()
+      const objectSchema = schema[slug]
+      const id = objectSchema ? generateId(objectSchema) : crypto.randomUUID()
       const now = new Date()
       const record = { id, ...attrs, createdAt: now, updatedAt: now } as RelateRecord
       getTable(slug).set(id, record as Record<string, unknown>)

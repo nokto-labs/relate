@@ -52,6 +52,25 @@ export function validateSchema(schema: SchemaDefinition): void {
       )
     }
 
+    if (objectSchema.id !== undefined && typeof objectSchema.id !== 'function') {
+      throw new InvalidSchemaError(
+        `Invalid id on "${slug}": must be a function that returns a string`,
+      )
+    }
+
+    if (objectSchema.idPrefix !== undefined) {
+      if (typeof objectSchema.idPrefix !== 'string' || objectSchema.idPrefix.length === 0) {
+        throw new InvalidSchemaError(
+          `Invalid idPrefix on "${slug}": must be a non-empty string`,
+        )
+      }
+      if (!/^[a-z][a-z0-9]*$/.test(objectSchema.idPrefix)) {
+        throw new InvalidSchemaError(
+          `Invalid idPrefix on "${slug}": use lowercase letters and numbers only`,
+        )
+      }
+    }
+
     for (const [attrName, attrSchema] of Object.entries(objectSchema.attributes)) {
       if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(attrName)) {
         throw new InvalidSchemaError(

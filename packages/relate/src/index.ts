@@ -1,6 +1,7 @@
 export { relate } from './relate'
 export { defineSchema } from './schema'
 export { EventBus } from './events'
+export { generateId } from './id'
 export { FILTER_OPERATORS, isFilterOperatorObject, matchesFilter, mergeFilters } from './filters'
 export { RelateError, NotFoundError, DuplicateError, ValidationError, RefNotFoundError, RefConstraintError, CascadeDepthError, InvalidSchemaError } from './errors'
 export type { ErrorCode, ErrorDetail } from './errors'

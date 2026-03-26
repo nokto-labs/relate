@@ -184,4 +184,31 @@ describe('db.batch', () => {
     const records = await db.person.find()
     expect(records.map((record) => record.email).sort()).toEqual(['existing@test.com'])
   })
+
+  it('uses custom id and idPrefix in batch creates', async () => {
+    let counter = 0
+    const adapter = createMockAdapter()
+    const db = relate({
+      adapter,
+      schema: defineSchema({
+        objects: {
+          event: {
+            attributes: { title: 'text' },
+            idPrefix: 'evt',
+            id: () => `${++counter}`,
+          },
+        },
+      }),
+    })
+
+    const result = await db.batch((b) => {
+      const a = b.event.create({ title: 'First' })
+      const b2 = b.event.create({ title: 'Second' })
+      return { aId: a.id, bId: b2.id }
+    })
+
+    expect(result.aId).toBe('evt_1')
+    expect(result.bId).toBe('evt_2')
+    expect(await db.event.get(result.aId)).toMatchObject({ title: 'First' })
+  })
 })

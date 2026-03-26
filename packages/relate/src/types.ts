@@ -26,6 +26,10 @@ export interface ObjectSchema {
   uniqueBy?: string
   /** Plural name used for routing (e.g. 'people' for 'person'). Defaults to slug + 's'. */
   plural?: string
+  /** Custom ID generator. Must return a string. Defaults to crypto.randomUUID(). */
+  id?: () => string
+  /** Prefix prepended to generated IDs (e.g. 'evt' produces 'evt_<id>'). */
+  idPrefix?: string
 }
 
 export interface RelationshipSchema {
